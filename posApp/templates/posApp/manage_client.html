@@ -1,0 +1,165 @@
+<div class="container-fluid">
+    <form action="" id="client-form">
+        <input type="text" name="id" value="{% if client.pk %}{{client.pk}}{% endif %}">
+        <div class="form-group mb-3"> 
+            <label for="" class="control-label">Nombre</label>
+            <input type="text" name="nombre" id="nombre" class="form-control form-control-sm rounded-0" value="{% if client.nombre %}{{client.nombre}}{% endif %}" required>
+        </div>
+        <div class="form-group mb-3"> 
+            <label for="" class="control-label">Apellido Paterno</label>
+            <input type="text" name="apellido_paterno" id="apellido_paterno" class="form-control form-control-sm rounded-0" value="{% if client.apellido_paterno %}{{client.apellido_paterno}}{% endif %}" required>
+        </div>
+        <div class="form-group mb-3"> 
+            <label for="" class="control-label">Apellido Materno</label>
+            <input type="text" name="apellido_materno" id="apellido_materno" class="form-control form-control-sm rounded-0" value="{% if client.apellido_materno %}{{client.apellido_materno}}{% endif %}" required>
+        </div>
+        <div class="form-group mb-3">
+            <label for="genero" class="control-label">Genero </label>
+            <select name="genero_id" id="genero_id" class="form-select form-select-sm rounded-0" required>
+            {% if not client.genero %}
+            <option value="" disabled selected></option>
+            {% else %}
+            <option value="" disabled></option>
+            {% endif %}
+            {% for genero in generos  %}
+                {% if genero.genero == genero.id %}
+                <option value="{{ genero.id }}" selected>{{ genero.genero }}</option>
+                {% else %}
+                <option value="{{ genero.id }}">{{ genero.genero }}</option>
+                {% endif %}
+            {% endfor %}
+        </select>
+            <div class="form-group mb-3"> 
+                <label for="celular" class="control-label">Celular</label>
+                <input type="text" name="celular" id="celular" class="form-control form-control-sm rounded-0" value="{% if client.celular %}{{client.celular}}{% endif %}" required>
+            </div>
+            <div class="form-group mb-3">
+                <label for="codigo_postal" class="control-label">Codigo Postal</label>
+                <input type="text" name="codigo_postal" id="codigo_postal" class="form-control form-control-sm rounded-0" value="{% if client.codigo_postal %}{{client.codigo_postal}}{% endif %}" required>
+            </div>
+            <div class="form-group mb-3">
+                <label for="email" class="control-label">Email</label>
+                <input type="email" name="email" id="email" class="form-control form-control-sm rounded-0" value="{% if client.email %}{{client.email}}{% endif %}" required>
+            </div>
+            <div class="form-group mb-3">
+                <label for="fecha_nacimiento" class="control-label">Fecha Nacimiento</label>
+                <input type="text" name="fecha_nacimiento" id="fecha_nacimiento" class="form-control form-control-sm rounded-0" value="{% if client.fecha_nacimiento %}{{client.fecha_nacimiento}}{% endif %}" required>
+            </div>
+            <div class="form-group mb-3">
+                <label for="contacto_emergencia" class="control-label">Contacto Emergencia</label>
+                <input type="text" name="contacto_emergencia" id="contacto_emergencia" class="form-control form-control-sm rounded-0" value="{% if client.contacto_emergencia %}{{client.contacto_emergencia}}{% endif %}" required>
+            </div>
+            <div class="form-group mb-3"> 
+                <label for="emergency_phone" class="control-label">Numero de emergencia</label>
+                <input type="text" name="emergency_phone" id="emergency_phone" class="form-control form-control-sm rounded-0" value="{% if client.emergency_phone %}{{client.emergency_phone}}{% endif %}" required>
+            </div>
+            <div class="form-group mb-3">
+                <label for="sangre" class="control-label">Sangre </label>
+                <input type="text" name="sangre" id="sangre" class="form-control form-control-sm rounded-0" value="{% if client.sangre %}{{client.sangre}}{% endif %}" required>
+            </div>
+            <div class="form-group mb-3">
+                <label for="pay_day" class="control-label">Dia de pago</label>
+                <input type="text" name="pay_day" id="pay_day" class="form-control form-control-sm rounded-0" value="{% if client.pay_day %}{{client.pay_day}}{% endif %}" required>
+            </div>
+
+            <div class="form-group mb-3">
+                <label for="nivel" class="control-label">Nivel</label>
+                <select name="nivel" id="nivel" class="form-select form-select-sm rounded-0" required>
+                {% if not client.nivel %}
+                <option value="" disabled selected></option>
+                {% else %}
+                <option value="" disabled></option>
+                {% endif %}
+                {% for nivel in niveles  %}
+                    {% if nivel.level == level.id %}
+                    <option value="{{ nivel.id }}" selected>{{ nivel.level }}</option>
+                    {% else %}
+                    <option value="{{ nivel.id }}">{{ nivel.level }}</option>
+                    {% endif %}
+                {% endfor %}
+            </select>
+            <div class="form-group mb-3">
+                <label for="horario" class="control-label">Horario</label>
+                <input type="text" name="horario" id="horario" class="form-control form-control-sm rounded-0" value="{% if client.horario %}{{client.horario}}{% endif %}" required>
+            </div>
+            <div class="form-group mb-3">
+                <label for="direccion" class="control-label">Direccion</label>
+                <input type="text" name="direccion" id="direccion" class="form-control form-control-sm rounded-0" value="{% if client.direccion %}{{client.direccion}}{% endif %}" required>
+            </div>
+            <div class="form-group mb-3">
+                <label for="suburbio" class="control-label">Suburbio</label>
+                <input type="text" name="suburbio" id="suburbio" class="form-control form-control-sm rounded-0" value="{% if client.suburbio %}{{client.suburbio}}{% endif %}" required>
+            </div>
+            <div class="form-group mb-3">
+                <label for="condicion_medica" class="control-label">Condicion Medica</label>
+                <input type="text" name="condicion_medica" id="condicion_medica" class="form-control form-control-sm rounded-0" value="{% if client.condicion_medica %}{{client.condicion_medica}}{% endif %}" required>
+            </div>
+            
+            <div class="form-group mb-3">
+                <label for="status" class="control-label">Status</label>
+                <select name="status" id="status" class="form-select form-select-sm rounded-0" required>
+            {% if client.status and product.status == 1 %}
+            <option value="1" selected>Activo</option>
+            {% else %}
+            <option value="1">Activo</option>
+            {% endif %}
+
+            {% if client.status and client.status == 0 %}
+            <option value="0" selected>Inactivo</option>
+            {% else %}
+            <option value="0">Inactivo</option>
+            {% endif %}
+        </select>
+            </div>
+    </form>
+    </div>
+    <script>
+        $(function() {
+            $('#client-form').submit(function(e) {
+                e.preventDefault();
+                var _this = $(this)
+                $('.err-msg').remove();
+                var el = $('<div>')
+                el.addClass("alert alert-danger err-msg")
+                el.hide()
+                if (_this[0].checkValidity() == false) {
+                    _this[0].reportValidity();
+                    return false;
+                }
+                start_loader();
+                $.ajax({
+                    headers: {
+                        "X-CSRFToken": '{{csrf_token}}'
+                    },
+                    url: "{% url 'save-client-page' %}",
+                    data: new FormData($(this)[0]),
+                    cache: false,
+                    contentType: false,
+                    processData: false,
+                    method: 'POST',
+                    type: 'POST',
+                    dataType: 'json',
+                    error: err => {
+                        console.log(err)
+                        end_loader();
+                    },
+                    success: function(resp) {
+                        if (typeof resp == 'object' && resp.status == 'success') {
+                            el.removeClass("alert alert-danger err-msg")
+                            location.reload()
+                        } else if (resp.status == 'failed' && !!resp.msg) {
+                            el.text(resp.msg)
+                        } else {
+                            el.text("An error occured", 'error');
+                            end_loader();
+                            console.err(resp)
+                        }
+                        _this.prepend(el)
+                        el.show('slow')
+                        $("html, body, .modal").scrollTop(0);
+                        end_loader()
+                    }
+                })
+            })
+        })
+    </script>
