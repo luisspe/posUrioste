@@ -51,6 +51,7 @@
                         <th class="text-center py-1">Fecha</th>
                         <th class="text-center py-1">Codigo de Transc.</th>
                         <th class="text-center py-1">Cliente</th>
+                        <th class="text-center py-1">Realizo</th>
                         <th class="text-center py-1">Total</th>
                         <th class="text-center py-1">Impuesto</th>
                         <th class="text-center py-1">Productos</th>
@@ -65,6 +66,7 @@
                         <td class="px-2 py-1 text-start">{{ sale.date_added|date:'Y-m-d H:i' }}</td>
                         <td class="px-2 py-1 text-start">{{ sale.code }}</td>
                         <td class="px-2 py-1 text-start">{{ sale.client }}</td>
+                        <td class="px-2 py-1 text-start">{{ sale.usuario.username }}</td>
                         <td class="px-2 py-1 text-end">{{ sale.grand_total|intcomma }}</td>
                         <td class="px-2 py-1 text-end">({{ sale.tax }}%) {{ sale.tax_amount|intcomma:2 }}</td>
                         <td class="px-2 py-1 text-center">{{ sale.item_count|intcomma }}</td>

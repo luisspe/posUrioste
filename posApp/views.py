@@ -10,6 +10,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.shortcuts import redirect
 import json, sys
 from datetime import date, datetime
+from django.contrib.auth.models import User
 from django.utils import timezone
 # Login
 def login_user(request):
@@ -336,6 +337,7 @@ def checkout_modal(request):
 def save_pos(request):
     resp = {'status':'failed','msg':''}
     data = request.POST
+    usuario_actual = request.user
     print(data)
     pref = datetime.now().year + datetime.now().year
     client = Clientes.objects.filter(id=data['client']).first()
@@ -350,7 +352,7 @@ def save_pos(request):
     code = str(pref) + str(code)
 
     try:
-        sales = Sales(code=code, sub_total = data['sub_total'], tax = data['tax'], tax_amount = data['tax_amount'], grand_total = data['grand_total'], tendered_amount = data['tendered_amount'], client=client, amount_change = data['amount_change'] , tipoPago = tipoPago).save()
+        sales = Sales(code=code, sub_total = data['sub_total'], tax = data['tax'], tax_amount = data['tax_amount'], grand_total = data['grand_total'], tendered_amount = data['tendered_amount'], client=client, amount_change = data['amount_change'] , tipoPago = tipoPago,usuario=usuario_actual ).save()
         sale_id = Sales.objects.last().pk
         i = 0
         for prod in data.getlist('product_id[]'):
@@ -377,7 +379,7 @@ def salesList(request):
     
     today = timezone.now()
     clientes = Clientes.objects.all()
-
+    
     
     if request.method == 'GET':
         start_date = request.GET.get('start_date')
@@ -411,16 +413,18 @@ def salesList(request):
     
     sale_data = []
     for sale in sales:
+        
         data = {}
         for field in sale._meta.get_fields(include_parents=False):
             if field.related_model is None:
                 data[field.name] = getattr(sale,field.name)
         data['items'] = salesItems.objects.filter(sale_id = sale).all()
         data['client'] = sale.client
+        data['usuario'] = sale.usuario
         data['item_count'] = len(data['items'])
         if 'tax_amount' in data:
             data['tax_amount'] = format(float(data['tax_amount']),'.2f')
-        # print(data)
+            print(data)
         sale_data.append(data)
 
     #print(sale_data)
