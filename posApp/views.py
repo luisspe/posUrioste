@@ -453,9 +453,12 @@ def receipt(request):
     if 'tax_amount' in transaction:
         transaction['tax_amount'] = format(float(transaction['tax_amount']))
     ItemList = salesItems.objects.filter(sale_id = sales).all()
+    print(sales)
+    print(transaction)
     context = {
         "transaction" : transaction,
-        "salesItems" : ItemList
+        "salesItems" : ItemList,
+        "sales": sales
     }
 
     return render(request, 'posApp/receipt.html',context)

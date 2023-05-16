@@ -16,9 +16,10 @@
                     {% else %}
                     <option value="" disabled></option>
                     {% endif %}
+                    <option value="" selected>General</option>
                     {% for cliente in clientes  %}
                         {% if cliente.id == cliente.id %}
-                        <option value="{{ cliente.id }}" selected>{{ cliente.nombre }} {{ cliente.apellido_paterno  }}</option>
+                        <option value="{{ cliente.id }}">{{ cliente.nombre }} {{ cliente.apellido_paterno  }}</option>
                         {% else %}
                         <option value="{{ cliente.id }}">{{ cliente.nombre }}{{ cliente.apellido_paterno }}</option>
                         {% endif %}

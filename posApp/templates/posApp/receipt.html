@@ -31,10 +31,12 @@
                 {% for items in salesItems|slice:"1"  %}
                 
                 
-                <span>Cliente: <strong>{{ items.client }}</strong></span>
+                <span>Cliente: <strong>{{ items.client.nombre }} {{ items.client.apellido_paterno }} {{ items.client.apellido_materno }}</strong></span> <br>
                     
                 {% endfor %}
-                
+                {% if sales %}
+                    <span>Realizo venta: </span><span><strong>{{ sales.usuario }}</strong></span>
+                {% endif %}
             </div>
         </div>
         <div class="clear-fix py-3"></div>
