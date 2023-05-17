@@ -1,1 +1,1 @@
-web: gunicorn pos.wsgi
+web: python manage.py && migrate gunicorn pos.wsgi
