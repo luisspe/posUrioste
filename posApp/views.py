@@ -111,7 +111,7 @@ def save_category(request):
             save_category = Category(name=data['name'], description = data['description'],status = data['status'])
             save_category.save()
         resp['status'] = 'success'
-        messages.success(request, 'Category Successfully saved.')
+        messages.success(request, 'Categoria guardada con exito.')
     except:
         resp['status'] = 'failed'
     return HttpResponse(json.dumps(resp), content_type="application/json")
@@ -123,7 +123,7 @@ def delete_category(request):
     try:
         Category.objects.filter(id = data['id']).delete()
         resp['status'] = 'success'
-        messages.success(request, 'Category Successfully deleted.')
+        messages.success(request, 'Categoria eliminada con exito.')
     except:
         resp['status'] = 'failed'
     return HttpResponse(json.dumps(resp), content_type="application/json")
@@ -282,7 +282,7 @@ def save_product(request):
                 save_product = Products(code=data['code'], category_id=category, name=data['name'], description = data['description'], price = float(data['price']),status = data['status'])
                 save_product.save()
             resp['status'] = 'success'
-            messages.success(request, 'Product Successfully saved.')
+            messages.success(request, 'Producto guardado con exito.')
         except:
             resp['status'] = 'failed'
     return HttpResponse(json.dumps(resp), content_type="application/json")
@@ -294,7 +294,7 @@ def delete_product(request):
     try:
         Products.objects.filter(id = data['id']).delete()
         resp['status'] = 'success'
-        messages.success(request, 'Product Successfully deleted.')
+        messages.success(request, 'Producto eliminado con exito.')
     except:
         resp['status'] = 'failed'
     return HttpResponse(json.dumps(resp), content_type="application/json")
