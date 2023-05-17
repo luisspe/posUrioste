@@ -132,7 +132,7 @@ STATICFILES_DIRS = [
 
 
 CSRF_TRUSTED_ORIGINS = [
-    'https://posurioste-production.up.railway.app/'
+    'https://posurioste-production.up.railway.app'
 ]
 
 
