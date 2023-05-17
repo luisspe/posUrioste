@@ -130,6 +130,12 @@ STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static'),
 ]
 
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://posurioste-production.up.railway.app/'
+]
+
+
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # Default primary key field type
