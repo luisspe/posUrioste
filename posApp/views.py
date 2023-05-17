@@ -387,11 +387,13 @@ def salesList(request):
         cliente = request.GET.get('cliente_id')
         query = request.GET.get('q')
 
-        if cliente:
-        # Perform the search and return the results
-            
-            sales = Sales.objects.filter(client=cliente)
-            total_money = Sales.objects.filter(client=cliente).aggregate(Sum('grand_total'))['grand_total__sum']
+
+
+        if start_date and end_date and cliente:
+            sales = Sales.objects.filter(date_added__range=(start_date, end_date), client=cliente)
+            total_money = Sales.objects.filter(date_added__range=(start_date, end_date)).aggregate(Sum('grand_total'))['grand_total__sum']
+
+       
         
         
 
@@ -403,6 +405,13 @@ def salesList(request):
             # Filtrar ventas por rango de fechas
             sales = Sales.objects.filter(date_added__range=(start_date, end_date))
             total_money = Sales.objects.filter(date_added__range=(start_date, end_date)).aggregate(Sum('grand_total'))['grand_total__sum']
+
+        elif cliente:
+        # Perform the search and return the results
+            
+            sales = Sales.objects.filter(client=cliente)
+            total_money = Sales.objects.filter(client=cliente).aggregate(Sum('grand_total'))['grand_total__sum']
+        
         else:
             # Obtener todas las ventas
             sales = Sales.objects.filter(date_added__date=today)
