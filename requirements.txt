@@ -2,6 +2,7 @@ asgiref==3.6.0
 click==8.1.3
 colorama==0.4.6
 Django==4.2
+django-bootstrap-static==4.2.1
 ems==0.2.25
 Flask==2.2.3
 gunicorn==20.1.0

@@ -40,6 +40,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'posApp.apps.posAppConfig',
     'django.contrib.humanize',
+    'bootstrap',
+    'fontawesome',
 ]
 
 MIDDLEWARE = [
