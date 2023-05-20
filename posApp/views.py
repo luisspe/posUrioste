@@ -379,12 +379,14 @@ def salesList(request):
     
     today = timezone.now()
     clientes = Clientes.objects.all()
+    formapago = FormaPago.objects.all()
     
     
     if request.method == 'GET':
         start_date = request.GET.get('start_date')
         end_date = request.GET.get('end_date')
         cliente = request.GET.get('cliente_id')
+        forma_pago = request.GET.get('formapago_id')
         query = request.GET.get('q')
 
 
@@ -394,9 +396,6 @@ def salesList(request):
             total_money = Sales.objects.filter(date_added__range=(start_date, end_date)).aggregate(Sum('grand_total'))['grand_total__sum']
 
        
-        
-        
-
         elif start_date and end_date:
             # Convertir a objetos de fecha
             #start_date = datetime.datetime(start_date)
@@ -406,11 +405,30 @@ def salesList(request):
             sales = Sales.objects.filter(date_added__range=(start_date, end_date))
             total_money = Sales.objects.filter(date_added__range=(start_date, end_date)).aggregate(Sum('grand_total'))['grand_total__sum']
 
+        elif start_date and end_date and forma_pago:
+            # Convertir a objetos de fecha
+            #start_date = datetime.datetime(start_date)
+            #end_date = datetime.datetime(end_date) + datetime.timedelta(days=1)
+    
+            # Filtrar ventas por rango de fechas
+            sales = Sales.objects.filter(date_added__range=(start_date, end_date), tipoPago=forma_pago)
+            total_money = Sales.objects.filter(date_added__range=(start_date, end_date), tipoPago=forma_pago).aggregate(Sum('grand_total'))['grand_total__sum']
+
+        elif forma_pago:
+            sales = Sales.objects.filter(tipoPago=forma_pago)
+            total_money = Sales.objects.filter(tipoPago=forma_pago).aggregate(Sum('grand_total'))['grand_total__sum']
+
         elif cliente:
         # Perform the search and return the results
             
             sales = Sales.objects.filter(client=cliente)
             total_money = Sales.objects.filter(client=cliente).aggregate(Sum('grand_total'))['grand_total__sum']
+
+        elif cliente and forma_pago:
+        # Perform the search and return the results
+            
+            sales = Sales.objects.filter(client=cliente, tipoPago=forma_pago)
+            total_money = Sales.objects.filter(client=cliente, tipoPago=forma_pago).aggregate(Sum('grand_total'))['grand_total__sum']
         
         else:
             # Obtener todas las ventas
@@ -429,6 +447,7 @@ def salesList(request):
                 data[field.name] = getattr(sale,field.name)
         data['items'] = salesItems.objects.filter(sale_id = sale).all()
         data['client'] = sale.client
+        data['tipoPago'] =sale.tipoPago
         data['usuario'] = sale.usuario
         data['item_count'] = len(data['items'])
         if 'tax_amount' in data:
@@ -444,7 +463,7 @@ def salesList(request):
         'page_title':'Sales Transactions',
         'sale_data':sale_data,
         'total': total_money,
-        
+        'formapago': formapago,
         'clientes': clientes
         
     }

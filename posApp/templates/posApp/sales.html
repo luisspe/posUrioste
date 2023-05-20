@@ -25,6 +25,22 @@
                         {% endif %}
                     {% endfor %}
                 </select>
+
+                <select name="formapago_id" id="formapago_id" class="form-select form-select-sm rounded-0" required>
+                    {% if not formapago %}
+                    <option value="" disabled selected></option>
+                    {% else %}
+                    <option value="" disabled></option>
+                    {% endif %}
+                    <option value="" selected>selecciona forma de pago</option>
+                    {% for fpago in formapago  %}
+                        {% if fpago.id == fpago.id %}
+                        <option value="{{ fpago.id }}">{{ fpago.tipo }}</option>
+                        {% else %}
+                        <option value="{{ fpago.id }}">{{ fpago.tipo }}</option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
  
             
                 <button class="btn-primary" type="submit">Buscar</button>
@@ -54,7 +70,7 @@
                         <th class="text-center py-1">Cliente</th>
                         <th class="text-center py-1">Realizo</th>
                         <th class="text-center py-1">Total</th>
-                        <th class="text-center py-1">Impuesto</th>
+                        <th class="text-center py-1">Tipo de Pago</th>
                         <th class="text-center py-1">Productos</th>
                         <th class="text-center py-1">Accion</th>
                         <th class="text-center py-1">Ventas: ${{ total }}</th>
@@ -69,7 +85,7 @@
                         <td class="px-2 py-1 text-start">{{ sale.client }}</td>
                         <td class="px-2 py-1 text-start">{{ sale.usuario.username }}</td>
                         <td class="px-2 py-1 text-end">{{ sale.grand_total|intcomma }}</td>
-                        <td class="px-2 py-1 text-end">({{ sale.tax }}%) {{ sale.tax_amount|intcomma:2 }}</td>
+                        <td class="px-2 py-1 text-end">{{ sale.tipoPago }} </td>
                         <td class="px-2 py-1 text-center">{{ sale.item_count|intcomma }}</td>
                         <td class="px-2 py-1 text-center">
                             <button class="mdc-button mdc-button--raised p-1 icon-button filled-button--light mdc-ripple-upgraded view-data" type="button" data-id="{{ sale.id }}" title="View Receipt">
