@@ -28,6 +28,7 @@
                                     <option value="{{ client.pk }}">{{ client }}</option>
                                 {% endfor %}
                             </select>
+                            <label for="tipoPago">Agrega un tipo de pago</label>
                             <select id="tipoPago" name="tipoPago" class="form-select form-select-sm">
                                 <option value="" disabled selected></option>
                                 {% for pago in tipo_pago %}
@@ -40,6 +41,16 @@
                         <div class="form-group mb-3">
                             <label for="product-qty">Cantidad</label>
                             <input type="number" class="form-control form-control-sm text-center" step="any" id="product-qty" value="1">
+                        </div>
+                    </div>
+                    <div class="col-lg-4 col-md-2 col-md-12">
+                        <div class="form-group mb-3">
+                            <div class="col-lg-4 col-md-2 col-md-12">
+                        <div class="form-group mb-3">
+                            <label for="product-qty">Descuento</label>
+                            <input class="form-control form-control-sm text-center"  type="number" name="descuento" value="0">
+                        </div>
+                    </div>
                         </div>
                     </div>
                     <div class="col-lg-4 col-md-2 col-md-12">
@@ -83,8 +94,6 @@
                                     <span class="h3 fw-bold" id="sub_total">0.00</span>
                                 </dd>
                                 
-                                
-                               
                                 <dd>
                                     <input type="hidden" class="form-control form-control-lg rounded-0 text-end" step="any" min="0" max="100" name="tax" value="0">
                                 </dd>
@@ -103,6 +112,11 @@
                                     <input type="hidden" name="grand_total" value="0">
                                     <span class="h3 fw-bold" id="grand_total">0.00</span>
                                 </dd>
+
+                                <dt class="h4 fw-bold text-light">Comentario</dt>
+                               
+                                <input class="form-control form-control-sm text-center"  type="text" name="comentario">
+                                    
                             </dl>
                         </div>
                     </div>
@@ -150,6 +164,9 @@
     function calc() {
         var sub_total = 0;
         var grand_total = 0;
+        var descuento = 0;
+
+        descuento = parseFloat($('[name="descuento"]').val());
         $('#POS-field table tbody tr').each(function() {
             price = $(this).find('[name="price[]"]').val()
             qty = $(this).find('[name="qty[]"]').val()
@@ -157,10 +174,12 @@
             total = parseFloat(price) * parseFloat(qty)
             $(this).find('.product_total').text(parseFloat(total).toLocaleString('en-US'))
             sub_total += parseFloat(total)
+            sub_total -= parseFloat(descuento);
         })
         tax = $('[name="tax"]').val()
         tax = tax / 100;
         var tax_amount = parseFloat(sub_total) * parseFloat(tax);
+        
         $('#tax_amount').text(parseFloat(tax_amount).toLocaleString('en-US'))
         $('[name="tax_amount"]').val(parseFloat(tax_amount))
         $('#grand_total').text(parseFloat(sub_total).toLocaleString('en-US'))
@@ -215,6 +234,10 @@
         $('[name="tax"]').on('input keypress keydown keyup', function() {
             calc()
         })
+        $('[name="descuento"]').on('input keypress keydown keyup', function() {
+            calc()
+        })
+
         $('#check_out').click(function() {
             if ($('#POS-field table tbody tr').length <= 0) {
                 alert("Add atleast 1 product first!")

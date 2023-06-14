@@ -142,7 +142,7 @@ class Sales(models.Model):
     client = models.ForeignKey(Clientes, on_delete=models.CASCADE)
     usuario = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     tipoPago = models.ForeignKey(FormaPago, on_delete=models.CASCADE) 
-    
+    comentario = models.CharField(max_length=300, null=True)
     def __str__(self):
         return self.code
 
