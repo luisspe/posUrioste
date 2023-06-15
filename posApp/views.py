@@ -354,7 +354,7 @@ def save_pos(request):
     code = str(pref) + str(code)
 
     try:
-        sales = Sales(code=code, sub_total = data['sub_total'], tax = data['tax'], tax_amount = data['tax_amount'], grand_total = data['grand_total'], tendered_amount = data['tendered_amount'], client=client, amount_change = data['amount_change'] , tipoPago = tipoPago,usuario=usuario_actual, comentario=data['comentario'] ).save()
+        sales = Sales(code=code, sub_total = data['sub_total'], tax = data['tax'], tax_amount = data['tax_amount'], grand_total = data['grand_total'], tendered_amount = data['tendered_amount'], tendered_amount_card = data['tendered_amount_card'], client=client, amount_change = data['amount_change'] , tipoPago = tipoPago,usuario=usuario_actual, comentario=data['comentario'] ).save()
         sale_id = Sales.objects.last().pk
         i = 0
         for prod in data.getlist('product_id[]'):

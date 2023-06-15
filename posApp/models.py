@@ -136,6 +136,7 @@ class Sales(models.Model):
     tax_amount = models.FloatField(default=0)
     tax = models.FloatField(default=0)
     tendered_amount = models.FloatField(default=0)
+    tendered_amount_card = models.FloatField(default=0)
     amount_change = models.FloatField(default=0)
     date_added = models.DateTimeField(default=timezone.now) 
     date_updated = models.DateTimeField(auto_now=True)
