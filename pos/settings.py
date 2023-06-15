@@ -84,12 +84,12 @@ WSGI_APPLICATION = 'pos.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'djansql',
-        'NAME': 'raiy',
-        'USER': 'poes',
-        'PASSWORD': 'LpPj',
-        'HOST': 'contai',
-        'PORT': '55',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'railway',
+        'USER': 'postgres',
+        'PASSWORD': 'LpPFtNT8QSRn6QxaITCj',
+        'HOST': 'containers-us-west-96.railway.app',
+        'PORT': '5485',
     }
 }
 
