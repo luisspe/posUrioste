@@ -147,7 +147,7 @@ def clients(request):
 
     if query:
         # Perform the search and return the results
-        results = Clientes.objects.filter(Q(nombre__contains=query) | Q(apellido_paterno__contains=query))
+        results = Clientes.objects.filter(Q(nombre__contains=query) | Q(apellido_paterno__contains=query) | Q(apellido_materno__contains=query))
         productos_inventario = None
     else:
         results = None
@@ -191,9 +191,10 @@ def save_client(request):
     if id.isnumeric() and int(id) > 0:
         check = Clientes.objects.exclude(id=id).filter(nombre=data['nombre']).all()
     else:
-        check = Clientes.objects.filter(celular=data['celular']).all()
+        check = Clientes.objects.filter(nombre=data['nombre'], apellido_paterno=data['apellido_paterno'], apellido_materno=data['apellido_materno']).all()
     if len(check) > 0 :
         resp['msg'] = "cliente ya existe"
+    
     else:
         genero = Genero.objects.filter(id = data['genero_id']).first()
         nivel = Levels.objects.filter(id = data['nivel']).first()

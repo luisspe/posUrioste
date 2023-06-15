@@ -37,7 +37,7 @@
                 <tbody>
 
                     {% if not results %}
-                        {% for client in clients %}
+                        {% for client in clients|slice:"40" %}
                         <tr>
                             <td class="px-2 py-1 text-center">{{ client.id }}</td>
                             <td class="px-2 py-1 text-start">{{ client.nombre }} {{ client.apellido_paterno }} {{ cleint.apellido_materno }}</td>

@@ -22,7 +22,7 @@
             <option value="" disabled></option>
             {% endif %}
             {% for genero in generos  %}
-                {% if genero.genero == genero.id %}
+                {% if client.genero_id == genero.id %}
                 <option value="{{ genero.id }}" selected>{{ genero.genero }}</option>
                 {% else %}
                 <option value="{{ genero.id }}">{{ genero.genero }}</option>
@@ -31,35 +31,35 @@
         </select>
             <div class="form-group mb-3"> 
                 <label for="celular" class="control-label">Celular</label>
-                <input type="text" name="celular" id="celular" class="form-control form-control-sm rounded-0" value="{% if client.celular %}{{client.celular}}{% endif %}" required>
+                <input type="text" name="celular" id="celular" class="form-control form-control-sm rounded-0" value="{% if client.celular %}{{client.celular}}{% endif %}">
             </div>
             <div class="form-group mb-3">
                 <label for="codigo_postal" class="control-label">Codigo Postal</label>
-                <input type="text" name="codigo_postal" id="codigo_postal" class="form-control form-control-sm rounded-0" value="{% if client.codigo_postal %}{{client.codigo_postal}}{% endif %}" required>
+                <input type="text" name="codigo_postal" id="codigo_postal" class="form-control form-control-sm rounded-0" value="{% if client.codigo_postal %}{{client.codigo_postal}}{% endif %}">
             </div>
             <div class="form-group mb-3">
                 <label for="email" class="control-label">Email</label>
-                <input type="email" name="email" id="email" class="form-control form-control-sm rounded-0" value="{% if client.email %}{{client.email}}{% endif %}" required>
+                <input type="email" name="email" id="email" class="form-control form-control-sm rounded-0" value="{% if client.email %}{{client.email}}{% endif %}">
             </div>
             <div class="form-group mb-3">
                 <label for="fecha_nacimiento" class="control-label">Fecha Nacimiento</label>
-                <input type="text" placeholder="dd/mm/yyyy" name="fecha_nacimiento" id="fecha_nacimiento" class="form-control form-control-sm rounded-0" value="{% if client.fecha_nacimiento %}{{client.fecha_nacimiento}}{% endif %}" required>
+                <input type="text" placeholder="dd/mm/yyyy" name="fecha_nacimiento" id="fecha_nacimiento" class="form-control form-control-sm rounded-0" value="{% if client.fecha_nacimiento %}{{client.fecha_nacimiento}}{% endif %}">
             </div>
             <div class="form-group mb-3">
                 <label for="contacto_emergencia" class="control-label">Contacto Emergencia</label>
-                <input type="text" name="contacto_emergencia" id="contacto_emergencia" class="form-control form-control-sm rounded-0" value="{% if client.contacto_emergencia %}{{client.contacto_emergencia}}{% endif %}" required>
+                <input type="text" name="contacto_emergencia" id="contacto_emergencia" class="form-control form-control-sm rounded-0" value="{% if client.contacto_emergencia %}{{client.contacto_emergencia}}{% endif %}">
             </div>
             <div class="form-group mb-3"> 
                 <label for="emergency_phone" class="control-label">Numero de emergencia</label>
-                <input type="text" name="emergency_phone" id="emergency_phone" class="form-control form-control-sm rounded-0" value="{% if client.emergency_phone %}{{client.emergency_phone}}{% endif %}" required>
+                <input type="text" name="emergency_phone" id="emergency_phone" class="form-control form-control-sm rounded-0" value="{% if client.emergency_phone %}{{client.emergency_phone}}{% endif %}">
             </div>
             <div class="form-group mb-3">
                 <label for="sangre" class="control-label">Sangre </label>
-                <input type="text" name="sangre" id="sangre" class="form-control form-control-sm rounded-0" value="{% if client.sangre %}{{client.sangre}}{% endif %}" required>
+                <input type="text" name="sangre" id="sangre" class="form-control form-control-sm rounded-0" value="{% if client.sangre %}{{client.sangre}}{% endif %}">
             </div>
             <div class="form-group mb-3">
                 <label for="pay_day" class="control-label">Dia de pago</label>
-                <input type="text" name="pay_day" id="pay_day" class="form-control form-control-sm rounded-0" value="{% if client.pay_day %}{{client.pay_day}}{% endif %}" required>
+                <input type="text" name="pay_day" id="pay_day" class="form-control form-control-sm rounded-0" value="{% if client.pay_day %}{{client.pay_day}}{% endif %}">
             </div>
 
             <div class="form-group mb-3">
@@ -71,7 +71,7 @@
                 <option value="" disabled></option>
                 {% endif %}
                 {% for nivel in niveles  %}
-                    {% if nivel.level == level.id %}
+                    {% if nivel.level_id == level.id %}
                     <option value="{{ nivel.id }}" selected>{{ nivel.level }}</option>
                     {% else %}
                     <option value="{{ nivel.id }}">{{ nivel.level }}</option>
@@ -80,19 +80,19 @@
             </select>
             <div class="form-group mb-3">
                 <label for="horario" class="control-label">Horario</label>
-                <input type="text" name="horario" id="horario" class="form-control form-control-sm rounded-0" value="{% if client.horario %}{{client.horario}}{% endif %}" required>
+                <input type="text" name="horario" id="horario" class="form-control form-control-sm rounded-0" value="{% if client.horario %}{{client.horario}}{% endif %}">
             </div>
             <div class="form-group mb-3">
                 <label for="direccion" class="control-label">Direccion</label>
-                <input type="text" name="direccion" id="direccion" class="form-control form-control-sm rounded-0" value="{% if client.direccion %}{{client.direccion}}{% endif %}" required>
+                <input type="text" name="direccion" id="direccion" class="form-control form-control-sm rounded-0" value="{% if client.direccion %}{{client.direccion}}{% endif %}">
             </div>
             <div class="form-group mb-3">
                 <label for="suburbio" class="control-label">Suburbio</label>
-                <input type="text" name="suburbio" id="suburbio" class="form-control form-control-sm rounded-0" value="{% if client.suburbio %}{{client.suburbio}}{% endif %}" required>
+                <input type="text" name="suburbio" id="suburbio" class="form-control form-control-sm rounded-0" value="{% if client.suburbio %}{{client.suburbio}}{% endif %}">
             </div>
             <div class="form-group mb-3">
                 <label for="condicion_medica" class="control-label">Condicion Medica</label>
-                <input type="text" name="condicion_medica" id="condicion_medica" class="form-control form-control-sm rounded-0" value="{% if client.condicion_medica %}{{client.condicion_medica}}{% endif %}" required>
+                <input type="text" name="condicion_medica" id="condicion_medica" class="form-control form-control-sm rounded-0" value="{% if client.condicion_medica %}{{client.condicion_medica}}{% endif %}">
             </div>
             
             <div class="form-group mb-3">
