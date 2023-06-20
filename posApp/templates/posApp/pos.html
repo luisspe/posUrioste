@@ -14,6 +14,9 @@
                 <div class="row align-items-end">
                     <div class="col-lg-5 col-md-5 col-sm-12">
                         <div class="form-group mb-3">
+
+                            
+
                             <label for="product-id">Selecciona Productos</label>
                             <select id="product-id" class="form-select form-select-sm">
                                 <option value="" disabled selected></option>
@@ -21,13 +24,16 @@
                                     <option value="{{ product.pk }}">{{ product }}</option>
                                 {% endfor %}
                             </select>
+
                             <label for="client">Agrega un cliente</label>
-                            <select id="client" name="client" class="form-select form-select-sm">
+                            <select id="client" name="client" class="form-select form-select-sm" autocapitalize="">
                                 <option value="" disabled selected></option>
                                 {% for client in clients %}
-                                    <option value="{{ client.pk }}">{{ client }}</option>
+                                    <option value="{{ client.pk }}">{{ client }} {{ client.apellido_paterno }} {{ client.apellido_materno }}</option>
                                 {% endfor %}
                             </select>
+                            
+                           
                             <label for="tipoPago">Agrega un tipo de pago</label>
                             <select id="tipoPago" name="tipoPago" class="form-select form-select-sm">
                                 <option value="" disabled selected></option>
@@ -192,6 +198,10 @@
     $(function() {
         $('#product-id').select2({
             placeholder: "Selecciona un producto aqui",
+            width: '100%'
+        })
+        $('#client').select2({
+            placeholder: "Selecciona un cliente aqui",
             width: '100%'
         })
         $('#add_item').click(function() {
