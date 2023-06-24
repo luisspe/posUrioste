@@ -19,9 +19,9 @@
                     <option value="" selected>General</option>
                     {% for cliente in clientes  %}
                         {% if cliente.id == cliente.id %}
-                        <option value="{{ cliente.id }}">{{ cliente.nombre }} {{ cliente.apellido_paterno  }}</option>
+                        <option value="{{ cliente.id }}">{{ cliente.nombre }} {{ cliente.apellido_paterno  }} {{cliente.apellido_materno}}</option>
                         {% else %}
-                        <option value="{{ cliente.id }}">{{ cliente.nombre }}{{ cliente.apellido_paterno }}</option>
+                        <option value="{{ cliente.id }}">{{ cliente.nombre }} {{ cliente.apellido_paterno }} {{cliente.apellido_materno}}</option>
                         {% endif %}
                     {% endfor %}
                 </select>
@@ -82,7 +82,7 @@
                         <td class="px-2 py-1 text-center">{{ sale.id }}</td>
                         <td class="px-2 py-1 text-start">{{ sale.date_added|date:'Y-m-d H:i' }}</td>
                         <td class="px-2 py-1 text-start">{{ sale.code }}</td>
-                        <td class="px-2 py-1 text-start">{{ sale.client }}</td>
+                        <td class="px-2 py-1 text-start">{{ sale.client }} {{ sale.client.apellido_paterno  }} {{sale.client.apellido_materno}}</td>
                         <td class="px-2 py-1 text-start">{{ sale.usuario.username }}</td>
                         <td class="px-2 py-1 text-end">{{ sale.grand_total|intcomma }}</td>
                         <td class="px-2 py-1 text-end">{{ sale.tipoPago }} </td>
@@ -110,6 +110,10 @@
         })
         $('.delete-data').click(function() {
             _conf("Quieres eliminar <b>" + $(this).attr('data-code') + "</b> transaccion?", "delete_sale", [$(this).attr('data-id')])
+        })
+        $('#cliente_id').select2({
+            placeholder: "Selecciona un cliente aqui",
+            width: '100%'
         })
 
     })
