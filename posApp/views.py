@@ -391,9 +391,20 @@ def salesList(request):
         forma_pago = request.GET.get('formapago_id')
         query = request.GET.get('q')
 
+        if start_date and end_date and forma_pago and cliente:
+            sales = Sales.objects.filter(date_added__range=(start_date, end_date), tipoPago=forma_pago, client=cliente)
+            total_money = Sales.objects.filter(date_added__range=(start_date, end_date), tipoPago=forma_pago).aggregate(Sum('grand_total'))['grand_total__sum']
 
+        elif start_date and end_date and forma_pago:
+            # Convertir a objetos de fecha
+            #start_date = datetime.datetime(start_date)
+            #end_date = datetime.datetime(end_date) + datetime.timedelta(days=1)
+    
+            # Filtrar ventas por rango de fechas
+            sales = Sales.objects.filter(date_added__range=(start_date, end_date), tipoPago=forma_pago)
+            total_money = Sales.objects.filter(date_added__range=(start_date, end_date), tipoPago=forma_pago).aggregate(Sum('grand_total'))['grand_total__sum']
 
-        if start_date and end_date and cliente:
+        elif start_date and end_date and cliente:
             sales = Sales.objects.filter(date_added__range=(start_date, end_date), client=cliente)
             total_money = Sales.objects.filter(date_added__range=(start_date, end_date)).aggregate(Sum('grand_total'))['grand_total__sum']
 
@@ -406,15 +417,7 @@ def salesList(request):
             # Filtrar ventas por rango de fechas
             sales = Sales.objects.filter(date_added__range=(start_date, end_date))
             total_money = Sales.objects.filter(date_added__range=(start_date, end_date)).aggregate(Sum('grand_total'))['grand_total__sum']
-
-        elif start_date and end_date and forma_pago:
-            # Convertir a objetos de fecha
-            #start_date = datetime.datetime(start_date)
-            #end_date = datetime.datetime(end_date) + datetime.timedelta(days=1)
-    
-            # Filtrar ventas por rango de fechas
-            sales = Sales.objects.filter(date_added__range=(start_date, end_date), tipoPago=forma_pago)
-            total_money = Sales.objects.filter(date_added__range=(start_date, end_date), tipoPago=forma_pago).aggregate(Sum('grand_total'))['grand_total__sum']
+ 
 
         elif forma_pago:
             sales = Sales.objects.filter(tipoPago=forma_pago)
