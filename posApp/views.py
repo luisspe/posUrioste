@@ -382,8 +382,8 @@ def salesList(request):
     today = timezone.now()
     clientes = Clientes.objects.all()
     formapago = FormaPago.objects.all()
-    
-    
+    totalEfectivo = Sales.objects.filter(date_added__date=today, tipoPago=2).aggregate(Sum('grand_total'))['grand_total__sum']
+    totalBanco = Sales.objects.filter(date_added__date=today, tipoPago=1).aggregate(Sum('grand_total'))['grand_total__sum']
     if request.method == 'GET':
         start_date = request.GET.get('start_date')
         end_date = request.GET.get('end_date')
@@ -469,8 +469,9 @@ def salesList(request):
         'sale_data':sale_data,
         'total': total_money,
         'formapago': formapago,
-        'clientes': clientes
-        
+        'clientes': clientes,
+        'totalEfectivo': totalEfectivo,
+        'totalBanco': totalBanco
     }
     # return HttpResponse('')
     return render(request, 'posApp/sales.html',context)
