@@ -181,8 +181,10 @@
             total = parseFloat(price) * parseFloat(qty)
             $(this).find('.product_total').text(parseFloat(total).toLocaleString('en-US'))
             sub_total += parseFloat(total)
-            sub_total -= parseFloat(descuento);
+            
         })
+        sub_total -= parseFloat(descuento);
+
         tax = $('[name="tax"]').val()
         tax = tax / 100;
         var tax_amount = parseFloat(sub_total) * parseFloat(tax);
@@ -244,6 +246,7 @@
         })
         $('[name="tax"]').on('input keypress keydown keyup', function() {
             calc()
+            
         })
         $('[name="descuento"]').on('input keypress keydown keyup', function() {
             calc()
