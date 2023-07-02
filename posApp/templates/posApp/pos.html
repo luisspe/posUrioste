@@ -174,6 +174,9 @@
         var descuento = 0;
 
         descuento = parseFloat($('[name="descuento"]').val());
+        if (isNaN(descuento) || descuento === "") {
+            descuento = 0;
+        }
         $('#POS-field table tbody tr').each(function() {
             price = $(this).find('[name="price[]"]').val()
             qty = $(this).find('[name="qty[]"]').val()
