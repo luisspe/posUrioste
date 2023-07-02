@@ -1,4 +1,15 @@
 {% extends "posApp/base.html" %} {% load humanize %} {% block pageContent %}
+<style>
+    .borroso {
+        filter: blur(4px); /* Ajusta el valor de "px" según la cantidad de desenfoque deseado */
+    
+    }
+    .button-wrapper {
+        max-width: 200px; /* Ajusta el valor según tus necesidades */
+        margin: 0 auto; /* Centra el contenido horizontalmente */
+        text-align: center; /* Centra el contenido del botón */
+    }
+</style>
 <div class="mdc-layout-grid__cell stretch-card mdc-layout-grid__cell--span-12">
     <div class="mdc-card">
         <div class="d-flex justify-content-between">
@@ -57,4 +68,27 @@
         </div>
     </div>
 </div>
+<div class="mdc-layout-grid__cell stretch-card mdc-layout-grid__cell--span-3-desktop mdc-layout-grid__cell--span-3-tablet">
+    <div class="mdc-card info-card info-card--warning">
+        <div class="card-inner">
+            <h5 class="card-title">Ventas del mes</h5>
+            <h5 id="monthSales" class="font-weight-light pb-2 mb-1 border-bottom borroso">{{ month_sales|intcomma }}</h5>
+            <p class="tx-12 text-muted">Ventas del mes</p>
+            <div class="card-icon-wrapper">
+                <i class="mdi mdi-cash-multiple"></i>
+            </div>
+            <div class="button-wrapper">
+                <div class="mdc-layout-grid__cell mdc-layout-grid__cell--span-12">
+                    <button id="toggleSalesButton" class="mdc-button mdc-button--outlined">Mostrar/Ocultar ventas del mes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    document.getElementById("toggleSalesButton").addEventListener("click", function() {
+        var monthSales = document.getElementById("monthSales");
+        monthSales.classList.toggle("borroso");
+    });
+</script>
 {% endblock pageContent %}

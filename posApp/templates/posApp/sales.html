@@ -3,47 +3,54 @@
     <div class="mdc-card py-2">
         <div class="d-flex justify-content-between align-items-center flex-wrap">
             <h4 class="card-title mb-0">Ventas</h4>
-            <form method="GET">
-                <label for="start-date">Fecha de inicio:</label>
-                <input type="date" name="start_date" id="start-date" class="mb-2">
+            <form method="GET" class="d-flex align-items-center flex-wrap">
+                <div class="form-group mb-2">
+                    <label for="start-date" class="form-label">Fecha de inicio:</label>
+                    <input type="date" name="start_date" id="start-date" class="form-control">
+                </div>
             
-                <label for="end-date">Fecha final:</label>
-                <input type="date" name="end_date" id="end-date" class="mb-2">
-
-                <select name="cliente_id" id="cliente_id" class="form-select form-select-sm rounded-0" required>
-                    {% if not clientes %}
-                    <option value="" disabled selected></option>
-                    {% else %}
-                    <option value="" disabled></option>
-                    {% endif %}
-                    <option value="" selected>General</option>
-                    {% for cliente in clientes  %}
-                        {% if cliente.id == cliente.id %}
-                        <option value="{{ cliente.id }}">{{ cliente.nombre }} {{ cliente.apellido_paterno  }} {{cliente.apellido_materno}}</option>
-                        {% else %}
-                        <option value="{{ cliente.id }}">{{ cliente.nombre }} {{ cliente.apellido_paterno }} {{cliente.apellido_materno}}</option>
-                        {% endif %}
-                    {% endfor %}
-                </select>
-
-                <select name="formapago_id" id="formapago_id" class="form-select form-select-sm rounded-0" required>
-                    {% if not formapago %}
-                    <option value="" disabled selected></option>
-                    {% else %}
-                    <option value="" disabled></option>
-                    {% endif %}
-                    <option value="" selected>selecciona forma de pago</option>
-                    {% for fpago in formapago  %}
-                        {% if fpago.id == fpago.id %}
-                        <option value="{{ fpago.id }}">{{ fpago.tipo }}</option>
-                        {% else %}
-                        <option value="{{ fpago.id }}">{{ fpago.tipo }}</option>
-                        {% endif %}
-                    {% endfor %}
-                </select>
- 
+                <div class="form-group mx-sm-3 mb-2">
+                    <label for="end-date" class="form-label">Fecha final:</label>
+                    <input type="date" name="end_date" id="end-date" class="form-control">
+                </div>
             
-                <button class="btn-primary" type="submit">Buscar</button>
+                <div class="form-group mb-2">
+                    <select name="cliente_id" id="cliente_id" class="form-select form-select-sm">
+                        {% if not clientes %}
+                        <option value="" disabled selected></option>
+                        {% else %}
+                        <option value="" disabled></option>
+                        {% endif %}
+                        <option value="" selected>General</option>
+                        {% for cliente in clientes  %}
+                            {% if cliente.id == cliente.id %}
+                            <option value="{{ cliente.id }}">{{ cliente.nombre }} {{ cliente.apellido_paterno  }} {{cliente.apellido_materno}}</option>
+                            {% else %}
+                            <option value="{{ cliente.id }}">{{ cliente.nombre }} {{ cliente.apellido_paterno }} {{cliente.apellido_materno}}</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                </div>
+            
+                <div class="form-group mb-2">
+                    <select name="formapago_id" id="formapago_id" class="form-select form-select-sm">
+                        {% if not formapago %}
+                        <option value="" disabled selected></option>
+                        {% else %}
+                        <option value="" disabled></option>
+                        {% endif %}
+                        <option value="" selected>Selecciona forma de pago</option>
+                        {% for fpago in formapago  %}
+                            {% if fpago.id == fpago.id %}
+                            <option value="{{ fpago.id }}">{{ fpago.tipo }}</option>
+                            {% else %}
+                            <option value="{{ fpago.id }}">{{ fpago.tipo }}</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                </div>
+            
+                <button class="btn btn-primary ml-2" type="submit">Buscar</button>
             </form>
 
             

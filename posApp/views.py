@@ -57,13 +57,20 @@ def home(request):
         date_added__month = current_month,
         date_added__day = current_day
     ).all()
+    month_sales = Sales.objects.filter(
+        date_added__year=current_year,
+        date_added__month = current_month,
+        
+    ).all()
     total_sales = sum(today_sales.values_list('grand_total',flat=True))
+    month_sales = sum(month_sales.values_list('grand_total',flat=True))
     context = {
         'page_title':'Home',
         'categories' : categories,
         'products' : products,
         'transaction' : transaction,
         'total_sales' : total_sales,
+        'month_sales': month_sales
     }
     return render(request, 'posApp/home.html',context)
 
