@@ -12,59 +12,56 @@
             <fieldset>
                 <legend>Agrega Productos</legend>
                 <div class="row align-items-end">
-                    <div class="col-lg-5 col-md-5 col-sm-12">
+                    <div class="col-lg-5 col-md-6 col-sm-12">
                         <div class="form-group mb-3">
-
-                            
-
                             <label for="product-id">Selecciona Productos</label>
                             <select id="product-id" class="form-select form-select-sm">
                                 <option value="" disabled selected></option>
                                 {% for product in products %}
-                                    <option value="{{ product.pk }}">{{ product }}</option>
-                                {% endfor %}
-                            </select>
-
-                            <label for="client">Agrega un cliente</label>
-                            <select id="client" name="client" class="form-select form-select-sm" autocapitalize="">
-                                <option value="" disabled selected></option>
-                                {% for client in clients %}
-                                    <option value="{{ client.pk }}">{{ client }} {{ client.apellido_paterno }} {{ client.apellido_materno }}</option>
-                                {% endfor %}
-                            </select>
-                            
-                           
-                            <label for="tipoPago">Agrega un tipo de pago</label>
-                            <select id="tipoPago" name="tipoPago" class="form-select form-select-sm">
-                                <option value="" disabled selected></option>
-                                {% for pago in tipo_pago %}
-                                    <option value="{{ pago.pk }}">{{ pago }}</option>
+                                <option value="{{ product.pk }}">{{ product }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                     </div>
-                    <div class="col-lg-3 col-md-5 col-md-12">
+                    <div class="col-lg-4 col-md-6 col-sm-12">
+                        <div class="form-group mb-3">
+                            <label for="client">Agrega un cliente</label>
+                            <select id="client" name="client" class="form-select form-select-sm" autocapitalize="">
+                                <option value="" disabled selected></option>
+                                {% for client in clients %}
+                                <option value="{{ client.pk }}">{{ client }} {{ client.apellido_paterno }} {{ client.apellido_materno }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-md-6 col-sm-12">
+                        <div class="form-group mb-3">
+                            <label for="tipoPago">Agrega un tipo de pago</label>
+                            <select id="tipoPago" name="tipoPago" class="form-select form-select-sm">
+                                <option value="" disabled selected></option>
+                                {% for pago in tipo_pago %}
+                                <option value="{{ pago.pk }}">{{ pago }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-lg-6 col-md-6 col-sm-12">
                         <div class="form-group mb-3">
                             <label for="product-qty">Cantidad</label>
                             <input type="number" class="form-control form-control-sm text-center" step="any" id="product-qty" value="1">
                         </div>
                     </div>
-                    <div class="col-lg-4 col-md-2 col-md-12">
-                        <div class="form-group mb-3">
-                            <div class="col-lg-4 col-md-2 col-md-12">
+                    <div class="col-lg-3 col-md-6 col-sm-12">
                         <div class="form-group mb-3">
                             <label for="product-qty">Descuento</label>
                             <input class="form-control form-control-sm text-center"  type="number" name="descuento" value="0">
                         </div>
                     </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-4 col-md-2 col-md-12">
+                    <div class="col-lg-3 col-md-6 col-sm-12">
                         <div class="form-group mb-3">
                             <button class="btn btn-light btn-sm bg-gradient border rounded-0 text-start" type="button" id="add_item"><i class="mdi mdi-plus"></i> Agrega Articulo</button>
                         </div>
                     </div>
-
                 </div>
             </fieldset>
             <fieldset>

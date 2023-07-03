@@ -62,15 +62,32 @@ def home(request):
         date_added__month = current_month,
         
     ).all()
+
+    month_sales_cash = Sales.objects.filter(
+        date_added__year=current_year,
+        date_added__month = current_month,
+        tipoPago=1
+        
+    ).all()
+    month_sales_bank = Sales.objects.filter(
+        date_added__year=current_year,
+        date_added__month = current_month,
+        tipoPago=2
+        
+    ).all()
     total_sales = sum(today_sales.values_list('grand_total',flat=True))
     month_sales = sum(month_sales.values_list('grand_total',flat=True))
+    month_sales_cash = sum(month_sales_cash.values_list('grand_total',flat=True))
+    month_sales_bank = sum(month_sales_bank.values_list('grand_total',flat=True))
     context = {
         'page_title':'Home',
         'categories' : categories,
         'products' : products,
         'transaction' : transaction,
         'total_sales' : total_sales,
-        'month_sales': month_sales
+        'month_sales': month_sales,
+        'month_sales_cash': month_sales_cash,
+        'month_sales_bank': month_sales_bank,
     }
     return render(request, 'posApp/home.html',context)
 

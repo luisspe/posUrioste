@@ -14,13 +14,7 @@
     color: black;
 }
 </style>
-<div class="mdc-layout-grid__cell stretch-card mdc-layout-grid__cell--span-12">
-    <div class="mdc-card">
-        <div class="d-flex justify-content-between">
-            <h4 class="card-title mb-0">Acuatica Urioste</h4>
-        </div>
-    </div>
-</div>
+
 <div class="mdc-layout-grid__cell stretch-card mdc-layout-grid__cell--span-12">
     <hr class="w-100">
 </div>
@@ -29,7 +23,7 @@
         <div class="card-inner">
             <h5 class="card-title">Categorias</h5>
             <h5 class="font-weight-light pb-2 mb-1 border-bottom">{{ categories|intcomma }}</h5>
-            <p class="tx-12 text-muted">Over All Count of Categories</p>
+            <p class="tx-12 text-muted">Todas las categorias</p>
             <div class="card-icon-wrapper">
                 <i class="material-icons">list</i>
             </div>
@@ -41,7 +35,7 @@
         <div class="card-inner">
             <h5 class="card-title">Productos</h5>
             <h5 class="font-weight-light pb-2 mb-1 border-bottom">{{ products|intcomma }}</h5>
-            <p class="tx-12 text-muted">Over All Count of Products</p>
+            <p class="tx-12 text-muted">Todos los productos</p>
             <div class="card-icon-wrapper">
                 <i class="material-icons">label</i>
             </div>
@@ -64,7 +58,7 @@
     <div class="mdc-card info-card info-card--warning">
         <div class="card-inner">
             <h5 class="card-title">Ventas de hoy</h5>
-            <h5 class="font-weight-light pb-2 mb-1 border-bottom">{{ total_sales|intcomma }}</h5>
+            <h5 class="font-weight-light pb-2 mb-1 border-bottom">$ {{ total_sales|intcomma }}</h5>
             <p class="tx-12 text-muted">Ventas de hoy</p>
             <div class="card-icon-wrapper">
                 <i class="mdi mdi-cash-multiple"></i>
@@ -76,8 +70,9 @@
     <div class="mdc-card info-card info-card--warning">
         <div class="card-inner">
             <h5 class="card-title">Ventas del mes</h5>
-            <h5 id="monthSales" class="font-weight-light pb-2 mb-1 border-bottom borroso">{{ month_sales|intcomma }}</h5>
-            <p class="tx-12 text-muted">Ventas del mes</p>
+            <h5 id="monthSales" class="font-weight-light pb-2 mb-1 border-bottom borroso">$ {{ month_sales|intcomma }}</h5>
+            <p id="borro" class="tx-12 text-muted borroso">Efectivo: ${{ month_sales_cash|intcomma }}</p>
+            <p id="borroo" class="tx-12 text-muted borroso">Banco: ${{ month_sales_bank|intcomma }}</p>
             <div class="card-icon-wrapper">
                 <i class="mdi mdi-cash-multiple"></i>
             </div>
@@ -92,7 +87,14 @@
 <script>
     document.getElementById("toggleSalesButton").addEventListener("click", function() {
         var monthSales = document.getElementById("monthSales");
+        var efectivo = document.getElementById("borro");
+        var banco = document.getElementById("borroo");
+
         monthSales.classList.toggle("borroso");
+        efectivo.classList.toggle("borroso");
+        banco.classList.toggle("borroso");
+
     });
+   
 </script>
 {% endblock pageContent %}
