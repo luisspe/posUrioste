@@ -86,7 +86,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for sale in sale_data %}
+                    {% for sale in sale_data|slice:'::-1' %}
                     <tr>
                         <td class="px-2 py-1 text-center">{{ sale.id }}</td>
                         <td class="px-2 py-1 text-start">{{ sale.date_added|date:'Y-m-d H:i' }}</td>
