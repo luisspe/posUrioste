@@ -206,44 +206,51 @@
             placeholder: "Selecciona un cliente aqui",
             width: '100%'
         })
-        $('#add_item').click(function() {
-            var id = $('#product-id').val()
-            var qty = $('#product-qty').val()
-            console.log(id, qty)
+        $('#add_item').bind('click touchstart', function() {
+            var id = $('#product-id').val();
+            var qty = $('#product-qty').val();
+            console.log(id, qty);
+
             if (id == '' || qty == '' || id == null || qty == null) {
-                alert("Tienes que elegir un producto necesariamente para continuar")
-                return false
+                alert("Tienes que elegir un producto necesariamente para continuar");
+                return false;
             }
+
             if (!!prod_arr[id]) {
                 if ($('#POS-field table tbody input[name="product_id[]"][value="' + id + '"]').length > 0) {
-                    alert('Item Already in the List.')
+                    alert('Item Already in the List.');
                     return false;
                 }
-                data = prod_arr[id]
-                var tr = $($('noscript#item-clone').html()).clone()
-                tr.find('[name="qty[]"]').val(qty)
-                tr.find('[name="product_id[]"]').val(id)
-                tr.find('[name="price[]"]').val(data.price)
-                tr.find('.product_name').text(data.name)
-                tr.find('.product_price').text(parseFloat(data.price).toLocaleString('en-US'))
-                tr.find('.product_total').text(parseFloat(data.price * qty).toLocaleString('en-US'))
-                $('#POS-field table tbody').append(tr)
-                $('#product-id').val('').trigger('change')
-                $('#product-qty').val(1)
-                calc()
+
+                data = prod_arr[id];
+                var tr = $($('noscript#item-clone').html()).clone();
+                tr.find('[name="qty[]"]').val(qty);
+                tr.find('[name="product_id[]"]').val(id);
+                tr.find('[name="price[]"]').val(data.price);
+                tr.find('.product_name').text(data.name);
+                tr.find('.product_price').text(parseFloat(data.price).toLocaleString('en-US'));
+                tr.find('.product_total').text(parseFloat(data.price * qty).toLocaleString('en-US'));
+                $('#POS-field table tbody').append(tr);
+                $('#product-id').val('').trigger('change');
+                $('#product-qty').val(1);
+                calc();
+
                 tr.find('[name="qty[]"]').on('input keypress keyup keydown', function() {
-                    calc()
-                })
+                    calc();
+                });
+
                 tr.find('.rem-item').click(function() {
                     if (confirm("Are you sure to remove " + data.name + " product form list?") == true) {
-                        tr.remove()
-                        calc()
+                        tr.remove();
+                        calc();
                     }
-                })
+                });
             } else {
                 alert("Undefined Product");
             }
-        })
+        });
+
+
         $('[name="tax"]').on('input keypress keydown keyup', function() {
             calc()
             
