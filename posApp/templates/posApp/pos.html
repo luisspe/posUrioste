@@ -206,7 +206,7 @@
             placeholder: "Selecciona un cliente aqui",
             width: '100%'
         })
-        $('#add_item').bind('click touchstart', function() {
+        $('#add_item').on('click touchstart', function() {
             var id = $('#product-id').val();
             var qty = $('#product-qty').val();
             console.log(id, qty);
