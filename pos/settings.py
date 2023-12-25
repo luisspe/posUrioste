@@ -84,12 +84,12 @@ WSGI_APPLICATION = 'pos.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'railway',
-        'USER': 'postgres',
-        'PASSWORD': 'LpPFtNT8QSRn6QxaITCj',
-        'HOST': 'containers-us-west-96.railway.app',
-        'PORT': '5485',
+        'ENGINE':'django.db.backends.postgresql',
+        'NAME':'railway',
+        'USER':'postgres',
+        'PASSWORD':'F6bAcFaa335FcCf2516GBDD43BEAcC1F',
+        'HOST':'monorail.proxy.rlwy.net',
+        'PORT':'56601',
     }
 }
 
