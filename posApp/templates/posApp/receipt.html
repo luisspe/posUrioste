@@ -103,24 +103,30 @@
 <script>
     $(function() {
         $('#receipt_print').click(function() {
-            var head = $('head').clone()
-            var p = $('#outprint').clone()
-            var el = $("<div>")
-            head.append('<style>body{background-color:unset !important}</style>')
-            el.append(head)
-            el.find('title').text("Receipt - Print View")
-            el.append(p)
-            start_loader()
-            var nw = window.open('', '_blank', "width=800,height=800,left=300, top = 200")
-            nw.document.write(el.html())
-            nw.document.close()
-            setTimeout(() => {
-                nw.print()
-                setTimeout(() => {
-                    nw.close()
-                    end_loader()
-                }, 250)
-            }, 300)
-        })
-    })
+            var head = $('head').clone();
+            var p = $('#outprint').clone();
+            var el = $("<div>");
+            head.append('<style>body{background-color:unset !important}</style>');
+            el.append(head);
+            el.find('title').text("Receipt - Print View");
+            el.append(p);
+
+            start_loader();
+
+            var nw = window.open('', '_blank', "width=800,height=800,left=300, top=200");
+
+            nw.document.write(el.html());
+            nw.document.close();
+
+            // Wait for the new window to load fully, then print
+            nw.onload = function() {
+                nw.focus(); // Focus on the new window
+                nw.print();
+                end_loader();
+            };
+
+            // Optionally, increase the timeout or let the user close the window manually
+            // Remove the automatic closing behavior
+        });
+    });
 </script>
