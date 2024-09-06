@@ -408,6 +408,7 @@ def salesList(request):
     formapago = FormaPago.objects.all()
     totalEfectivo = Sales.objects.filter(date_added__date=today, tipoPago=1).aggregate(Sum('grand_total'))['grand_total__sum']
     totalBanco = Sales.objects.filter(date_added__date=today, tipoPago=2).aggregate(Sum('grand_total'))['grand_total__sum']
+    
     if request.method == 'GET':
         start_date = request.GET.get('start_date')
         end_date = request.GET.get('end_date')
@@ -416,89 +417,62 @@ def salesList(request):
         query = request.GET.get('q')
 
         if start_date and end_date and forma_pago and cliente:
-            sales = Sales.objects.filter(date_added__range=(start_date, end_date), tipoPago=forma_pago, client=cliente)
+            sales = Sales.objects.filter(date_added__range=(start_date, end_date), tipoPago=forma_pago, client=cliente).order_by('-date_added')
             total_money = Sales.objects.filter(date_added__range=(start_date, end_date), tipoPago=forma_pago).aggregate(Sum('grand_total'))['grand_total__sum']
 
         elif start_date and end_date and forma_pago:
-            # Convertir a objetos de fecha
-            #start_date = datetime.datetime(start_date)
-            #end_date = datetime.datetime(end_date) + datetime.timedelta(days=1)
-    
-            # Filtrar ventas por rango de fechas
-            sales = Sales.objects.filter(date_added__range=(start_date, end_date), tipoPago=forma_pago)
+            sales = Sales.objects.filter(date_added__range=(start_date, end_date), tipoPago=forma_pago).order_by('-date_added')
             total_money = Sales.objects.filter(date_added__range=(start_date, end_date), tipoPago=forma_pago).aggregate(Sum('grand_total'))['grand_total__sum']
 
         elif start_date and end_date and cliente:
-            sales = Sales.objects.filter(date_added__range=(start_date, end_date), client=cliente)
+            sales = Sales.objects.filter(date_added__range=(start_date, end_date), client=cliente).order_by('-date_added')
             total_money = Sales.objects.filter(date_added__range=(start_date, end_date)).aggregate(Sum('grand_total'))['grand_total__sum']
 
-       
         elif start_date and end_date:
-            # Convertir a objetos de fecha
-            #start_date = datetime.datetime(start_date)
-            #end_date = datetime.datetime(end_date) + datetime.timedelta(days=1)
-    
-            # Filtrar ventas por rango de fechas
-            sales = Sales.objects.filter(date_added__range=(start_date, end_date))
+            sales = Sales.objects.filter(date_added__range=(start_date, end_date)).order_by('-date_added')
             total_money = Sales.objects.filter(date_added__range=(start_date, end_date)).aggregate(Sum('grand_total'))['grand_total__sum']
- 
 
         elif forma_pago:
-            sales = Sales.objects.filter(tipoPago=forma_pago)
+            sales = Sales.objects.filter(tipoPago=forma_pago).order_by('-date_added')
             total_money = Sales.objects.filter(tipoPago=forma_pago).aggregate(Sum('grand_total'))['grand_total__sum']
 
         elif cliente:
-        # Perform the search and return the results
-            
-            sales = Sales.objects.filter(client=cliente)
+            sales = Sales.objects.filter(client=cliente).order_by('-date_added')
             total_money = Sales.objects.filter(client=cliente).aggregate(Sum('grand_total'))['grand_total__sum']
 
         elif cliente and forma_pago:
-        # Perform the search and return the results
-            
-            sales = Sales.objects.filter(client=cliente, tipoPago=forma_pago)
+            sales = Sales.objects.filter(client=cliente, tipoPago=forma_pago).order_by('-date_added')
             total_money = Sales.objects.filter(client=cliente, tipoPago=forma_pago).aggregate(Sum('grand_total'))['grand_total__sum']
         
         else:
-            # Obtener todas las ventas
-            sales = Sales.objects.filter(date_added__date=today)
-            #sales = Sales.objects.all()
+            sales = Sales.objects.filter(date_added__date=today).order_by('-date_added')
             total_money = Sales.objects.filter(date_added__date=today).aggregate(Sum('grand_total'))['grand_total__sum']
-            
-
     
     sale_data = []
     for sale in sales:
-        
         data = {}
         for field in sale._meta.get_fields(include_parents=False):
             if field.related_model is None:
                 data[field.name] = getattr(sale,field.name)
-        data['items'] = salesItems.objects.filter(sale_id = sale).all()
+        data['items'] = salesItems.objects.filter(sale_id=sale).all()
         data['client'] = sale.client
-        data['tipoPago'] =sale.tipoPago
+        data['tipoPago'] = sale.tipoPago
         data['usuario'] = sale.usuario
         data['item_count'] = len(data['items'])
         if 'tax_amount' in data:
-            data['tax_amount'] = format(float(data['tax_amount']),'.2f')
-            print(data)
+            data['tax_amount'] = format(float(data['tax_amount']), '.2f')
         sale_data.append(data)
 
-    #print(sale_data)
-    #print(sale.client)
-    
-
     context = {
-        'page_title':'Sales Transactions',
-        'sale_data':sale_data,
+        'page_title': 'Sales Transactions',
+        'sale_data': sale_data,
         'total': total_money,
         'formapago': formapago,
         'clientes': clientes,
         'totalEfectivo': totalEfectivo,
         'totalBanco': totalBanco
     }
-    # return HttpResponse('')
-    return render(request, 'posApp/sales.html',context)
+    return render(request, 'posApp/sales.html', context)
 
 @login_required
 def receipt(request):
