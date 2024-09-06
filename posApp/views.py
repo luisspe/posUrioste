@@ -400,6 +400,7 @@ def save_pos(request):
         print("Unexpected error:", sys.exc_info()[0])
     return HttpResponse(json.dumps(resp),content_type="application/json")
 
+
 @login_required
 def salesList(request):
     
@@ -417,35 +418,35 @@ def salesList(request):
         query = request.GET.get('q')
 
         if start_date and end_date and forma_pago and cliente:
-            sales = Sales.objects.filter(date_added__range=(start_date, end_date), tipoPago=forma_pago, client=cliente).order_by('-date_added')
+            sales = Sales.objects.filter(date_added__range=(start_date, end_date), tipoPago=forma_pago, client=cliente).order_by('date_added')
             total_money = Sales.objects.filter(date_added__range=(start_date, end_date), tipoPago=forma_pago).aggregate(Sum('grand_total'))['grand_total__sum']
 
         elif start_date and end_date and forma_pago:
-            sales = Sales.objects.filter(date_added__range=(start_date, end_date), tipoPago=forma_pago).order_by('-date_added')
+            sales = Sales.objects.filter(date_added__range=(start_date, end_date), tipoPago=forma_pago).order_by('date_added')
             total_money = Sales.objects.filter(date_added__range=(start_date, end_date), tipoPago=forma_pago).aggregate(Sum('grand_total'))['grand_total__sum']
 
         elif start_date and end_date and cliente:
-            sales = Sales.objects.filter(date_added__range=(start_date, end_date), client=cliente).order_by('-date_added')
+            sales = Sales.objects.filter(date_added__range=(start_date, end_date), client=cliente).order_by('date_added')
             total_money = Sales.objects.filter(date_added__range=(start_date, end_date)).aggregate(Sum('grand_total'))['grand_total__sum']
 
         elif start_date and end_date:
-            sales = Sales.objects.filter(date_added__range=(start_date, end_date)).order_by('-date_added')
+            sales = Sales.objects.filter(date_added__range=(start_date, end_date)).order_by('date_added')
             total_money = Sales.objects.filter(date_added__range=(start_date, end_date)).aggregate(Sum('grand_total'))['grand_total__sum']
 
         elif forma_pago:
-            sales = Sales.objects.filter(tipoPago=forma_pago).order_by('-date_added')
+            sales = Sales.objects.filter(tipoPago=forma_pago).order_by('date_added')
             total_money = Sales.objects.filter(tipoPago=forma_pago).aggregate(Sum('grand_total'))['grand_total__sum']
 
         elif cliente:
-            sales = Sales.objects.filter(client=cliente).order_by('-date_added')
+            sales = Sales.objects.filter(client=cliente).order_by('date_added')
             total_money = Sales.objects.filter(client=cliente).aggregate(Sum('grand_total'))['grand_total__sum']
 
         elif cliente and forma_pago:
-            sales = Sales.objects.filter(client=cliente, tipoPago=forma_pago).order_by('-date_added')
+            sales = Sales.objects.filter(client=cliente, tipoPago=forma_pago).order_by('date_added')
             total_money = Sales.objects.filter(client=cliente, tipoPago=forma_pago).aggregate(Sum('grand_total'))['grand_total__sum']
         
         else:
-            sales = Sales.objects.filter(date_added__date=today).order_by('-date_added')
+            sales = Sales.objects.filter(date_added__date=today).order_by('date_added')
             total_money = Sales.objects.filter(date_added__date=today).aggregate(Sum('grand_total'))['grand_total__sum']
     
     sale_data = []
@@ -453,7 +454,7 @@ def salesList(request):
         data = {}
         for field in sale._meta.get_fields(include_parents=False):
             if field.related_model is None:
-                data[field.name] = getattr(sale,field.name)
+                data[field.name] = getattr(sale, field.name)
         data['items'] = salesItems.objects.filter(sale_id=sale).all()
         data['client'] = sale.client
         data['tipoPago'] = sale.tipoPago
