@@ -360,46 +360,69 @@ def checkout_modal(request):
 
 @login_required
 def save_pos(request):
-    resp = {'status':'failed','msg':''}
+    resp = {'status': 'failed', 'msg': ''}
     data = request.POST
     usuario_actual = request.user
-    print(data)
-    pref = datetime.now().year + datetime.now().year
+
+    # Pref calculation - make sure it works as intended
+    pref = datetime.now().year * 2
     client = Clientes.objects.filter(id=data['client']).first()
     tipoPago = FormaPago.objects.filter(id=data['tipoPago']).first()
-    
-    i = 1
-    while True:
-        code = '{:0>5}'.format(i)
-        i += int(1)
-        check = Sales.objects.filter(code = str(pref) + str(code)).all()
-        if len(check) <= 0:
-            break
-    code = str(pref) + str(code)
+
+    # Optimized code generation using max
+    last_sale = Sales.objects.filter(code__startswith=str(pref)).order_by('-code').first()
+    if last_sale:
+        last_code = int(last_sale.code[-5:]) + 1
+    else:
+        last_code = 1
+    code = f"{pref}{str(last_code).zfill(5)}"
 
     try:
-        sales = Sales(code=code, sub_total = data['sub_total'], tax = data['tax'], tax_amount = data['tax_amount'], grand_total = data['grand_total'], tendered_amount = data['tendered_amount'], tendered_amount_card = data['tendered_amount_card'], client=client, amount_change = data['amount_change'] , tipoPago = tipoPago,usuario=usuario_actual, comentario=data['comentario'] ).save()
-        sale_id = Sales.objects.last().pk
-        i = 0
-        for prod in data.getlist('product_id[]'):
-            product_id = prod 
-            sale = Sales.objects.filter(id=sale_id).first()
-            product = Products.objects.filter(id=product_id).first()
-            client = Clientes.objects.filter(id=data['client']).first()
-            qty = data.getlist('qty[]')[i] 
-            price = data.getlist('price[]')[i] 
-            total = float(qty) * float(price)
-            print({'sale_id' : sale, 'product_id' : product, 'client':client , 'qty' : qty, 'price' : price, 'total' : total})
-            salesItems(sale_id = sale, client = client, product_id = product, qty = qty, price = price, total = total).save()
-            i += int(1)
-        resp['status'] = 'success'
-        resp['sale_id'] = sale_id
-        messages.success(request, "La venta ha sido guardada.")
-    except:
-        resp['msg'] = "An error occured"
-        print("Unexpected error:", sys.exc_info()[0])
-    return HttpResponse(json.dumps(resp),content_type="application/json")
+        # Save the sales record
+        sales = Sales.objects.create(
+            code=code,
+            sub_total=data['sub_total'],
+            tax=data['tax'],
+            tax_amount=data['tax_amount'],
+            grand_total=data['grand_total'],
+            tendered_amount=data['tendered_amount'],
+            tendered_amount_card=data['tendered_amount_card'],
+            client=client,
+            amount_change=data['amount_change'],
+            tipoPago=tipoPago,
+            usuario=usuario_actual,
+            comentario=data['comentario']
+        )
 
+        # Prepare list for bulk insertion of salesItems
+        sales_items = []
+        for i, product_id in enumerate(data.getlist('product_id[]')):
+            product = Products.objects.get(id=product_id)
+            qty = data.getlist('qty[]')[i]
+            price = data.getlist('price[]')[i]
+            total = float(qty) * float(price)
+            sales_items.append(
+                salesItems(
+                    sale_id=sales,
+                    client=client,
+                    product_id=product,
+                    qty=qty,
+                    price=price,
+                    total=total
+                )
+            )
+
+        # Bulk insert sales items
+        salesItems.objects.bulk_create(sales_items)
+
+        resp['status'] = 'success'
+        resp['sale_id'] = sales.pk
+        messages.success(request, "La venta ha sido guardada.")
+    except Exception as e:
+        resp['msg'] = f"An error occurred: {str(e)}"
+        print("Unexpected error:", e)
+    
+    return HttpResponse(json.dumps(resp), content_type="application/json")
 
 @login_required
 def salesList(request):
