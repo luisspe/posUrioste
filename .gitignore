@@ -7,3 +7,6 @@ venv/
 *.pyc
 db.sqlite3
 git
+back
+produccion_backup2.sql
+backup.json

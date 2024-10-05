@@ -30,6 +30,8 @@ class Sucursal(models.Model):
     nombre = models.CharField(max_length=100)
     direccion = models.CharField(max_length=200, blank=True, null=True)
     telefono = models.CharField(max_length=20, blank=True, null=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.nombre
@@ -50,6 +52,17 @@ class Genero(models.Model):
 
     def __str__(self):
         return str(self.genero)
+
+
+class PlanInscripcion(models.Model):
+    nombre = models.CharField(max_length=100, blank=True, null=True)
+    descripcion = models.TextField(blank=True, null=True)
+    precio = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    sucursal = models.ForeignKey(Sucursal, on_delete=models.SET_NULL, null=True, blank=True)
+    duracion = models.IntegerField(default=30)  # Duración en días
+    sucursal = models.ForeignKey(Sucursal, on_delete=models.SET_NULL, null=True, blank=True)
+    def __str__(self):
+        return self.nombre
 
 
 
@@ -112,17 +125,30 @@ class Clientes(models.Model):
     condicion_medica = models.TextField()
     horario = models.TextField()
     nivel = models.ForeignKey(Levels, on_delete=models.DO_NOTHING, null=True, blank=True)
-    status = models.IntegerField(default=1) 
+    status = models.IntegerField(default=1)
+    sucursal = models.ForeignKey(Sucursal, on_delete=models.SET_NULL, null=True, blank=True) 
 
     def __str__(self):
         return str(self.nombre)
+    
+class Mensualidad(models.Model):
+    cliente = models.ForeignKey(Clientes, on_delete=models.CASCADE, blank=True, null=True)
+    fecha_vencimiento = models.DateField(blank=True, null=True)
+    monto = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    pagado = models.BooleanField(default=False, blank=True, null=True)
+    fecha_pago = models.DateField(null=True, blank=True)
+    plan_inscripcion = models.ForeignKey(PlanInscripcion, on_delete=models.CASCADE, blank=True, null=True)
+    sucursal = models.ForeignKey(Sucursal, on_delete=models.SET_NULL, null=True, blank=True)
+    def __str__(self):
+        return f"{self.cliente.nombre} - {self.fecha_vencimiento} - {'Pagado' if self.pagado else 'Pendiente'}"
 
 class Category(models.Model):
     name = models.TextField()
     description = models.TextField()
     status = models.IntegerField(default=1) 
     date_added = models.DateTimeField(default=timezone.now) 
-    date_updated = models.DateTimeField(auto_now=True) 
+    date_updated = models.DateTimeField(auto_now=True)
+    sucursal = models.ForeignKey(Sucursal, on_delete=models.SET_NULL, null=True, blank=True) 
 
     def __str__(self):
         return self.name
@@ -136,7 +162,7 @@ class Products(models.Model):
     status = models.IntegerField(default=1) 
     date_added = models.DateTimeField(default=timezone.now) 
     date_updated = models.DateTimeField(auto_now=True) 
-
+    sucursal = models.ForeignKey(Sucursal, on_delete=models.SET_NULL, null=True, blank=True)
     def __str__(self):
         return self.code + " - " + self.name
     
@@ -149,7 +175,6 @@ class FormaPago(models.Model):
 
 class Sales(models.Model):
     code = models.CharField(max_length=100)
-    
     sub_total = models.FloatField(default=0)
     grand_total = models.FloatField(default=0)
     tax_amount = models.FloatField(default=0)
@@ -163,6 +188,7 @@ class Sales(models.Model):
     usuario = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     tipoPago = models.ForeignKey(FormaPago, on_delete=models.CASCADE) 
     comentario = models.CharField(max_length=700, null=True)
+    sucursal = models.ForeignKey(Sucursal, on_delete=models.SET_NULL, null=True, blank=True)
     def __str__(self):
         return self.code
 
@@ -173,6 +199,18 @@ class salesItems(models.Model):
     qty = models.FloatField(default=0)
     total = models.FloatField(default=0)
     client = models.ForeignKey(Clientes, on_delete=models.CASCADE)
+    sucursal = models.ForeignKey(Sucursal, on_delete=models.SET_NULL, null=True, blank=True)
     
+
+class Salida(models.Model):
+    concepto = models.CharField(max_length=200, blank=True, null=True)
+    monto = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    fecha = models.DateField(blank=True, null=True)
+    comentario = models.TextField(blank=True, null=True)
+    sucursal = models.ForeignKey(Sucursal, on_delete=models.SET_NULL, null=True, blank=True)
+    sucursal = models.ForeignKey(Sucursal, on_delete=models.SET_NULL, null=True, blank=True)
+    def __str__(self):
+        return f"{self.concepto} - {self.monto} - {self.fecha}"
+
 
 
