@@ -1,0 +1,171 @@
+{% extends "posApp/base.html" %}
+
+{% block pageContent %}
+<div class="mdc-layout-grid__cell stretch-card mdc-layout-grid__cell--span-12">
+    <div class="mdc-card py-2">
+        <div class="card-header">
+            <h2 class="card-title">Registrar Mensualidad de {{ cliente.nombre }} {{ cliente.apellido_paterno }} {{ cliente.apellido_materno }}</h2>
+            <a href="{% url 'seleccionar-mensualidades' cliente.id %}" class="btn btn-secondary mt-3">
+                Pagar Múltiples Mensualidades
+            </a>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="id_plan_inscripcion">Plan inscripción:</label>
+                    <select name="plan_inscripcion" id="id_plan_inscripcion" class="form-control">
+                        <option value="">Elige un plan</option>
+                        {% for plan in planes_inscripcion %}
+                        <option value="{{ plan.id }}">{{ plan.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="id_fecha_vencimiento">Fecha vencimiento:</label>
+                    <input type="date" name="fecha_vencimiento" id="id_fecha_vencimiento" class="form-control" placeholder="dd/mm/aaaa" required>
+                </div>
+                <div class="form-group">
+                    <label for="id_monto">Monto:</label>
+                    <input type="text" name="monto" id="id_monto" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="forma_pago">Forma de Pago</label>
+                    <select name="forma_pago" id="forma_pago" class="form-control">
+                        {% for pago in formas_pago %}
+                        <option value="{{ pago.id }}">{{ pago.tipo }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group" id="cash_group">
+                    <label for="tendered_amount_cash">Cantidad Pagada en Efectivo</label>
+                    <input type="number" step="0.01" name="tendered_amount_cash" id="tendered_amount_cash" class="form-control" value="0">
+                </div>
+                <div class="form-group" id="card_group">
+                    <label for="tendered_amount_card">Cantidad Pagada con Tarjeta</label>
+                    <input type="number" step="0.01" name="tendered_amount_card" id="tendered_amount_card" class="form-control" value="0">
+                </div>
+                <div class="form-group">
+                    <label for="id_cambio">Cambio:</label>
+                    <input type="text" id="id_cambio" class="form-control" readonly>
+                </div>
+                {% if request.user.is_manager %}
+                <div class="form-group">
+                    <label for="fecha_registro">Fecha de Registro:</label>
+                    <input type="date" name="fecha_registro" id="fecha_registro" class="form-control">
+                </div>
+                {% endif %}
+                <button type="submit" class="btn btn-primary mt-3">Registrar Mensualidad</button>
+            </form>
+        </div>
+    </div>
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const planInscripcionSelect = document.getElementById('id_plan_inscripcion');
+        const montoInput = document.getElementById('id_monto');
+        const dateInput = document.getElementById('id_fecha_vencimiento');
+        const formaPagoSelect = document.getElementById('forma_pago');
+        const cashGroup = document.getElementById('cash_group');
+        const cardGroup = document.getElementById('card_group');
+        const cashInput = document.getElementById('tendered_amount_cash');
+        const cardInput = document.getElementById('tendered_amount_card');
+        const cambioInput = document.getElementById('id_cambio');
+
+        const planInscripcionOptions = {
+            {% for plan in planes_inscripcion %}
+            '{{ plan.id }}': {
+                'precio': {{ plan.precio|floatformat:2 }},
+                'duracion': {{ plan.duracion }}
+            },
+            {% endfor %}
+        };
+
+        // Función para calcular la fecha de vencimiento en base a la duración del plan
+        function calcularFechaVencimiento(duracion) {
+            const today = new Date();
+            today.setDate(today.getDate() + duracion);
+            const dd = String(today.getDate()).padStart(2, '0');
+            const mm = String(today.getMonth() + 1).padStart(2, '0'); // Enero es 0!
+            const yyyy = today.getFullYear();
+            return `${yyyy}-${mm}-${dd}`;
+        }
+
+        // Actualizar el monto y la fecha de vencimiento según el plan seleccionado
+        planInscripcionSelect.addEventListener('change', function() {
+            const selectedPlanId = this.value;
+            if (planInscripcionOptions.hasOwnProperty(selectedPlanId)) {
+                const plan = planInscripcionOptions[selectedPlanId];
+                montoInput.value = plan.precio;
+
+                // Calcular y establecer la fecha de vencimiento
+                const fechaVencimiento = calcularFechaVencimiento(plan.duracion);
+                dateInput.value = fechaVencimiento;
+            } else {
+                montoInput.value = '';
+                dateInput.value = '';
+            }
+            actualizarCambio();  // Actualizar el cambio después de seleccionar el plan
+        });
+
+        // Verificar la fecha seleccionada manualmente
+        dateInput.addEventListener('change', function() {
+            const selectedDate = new Date(dateInput.value);
+            const today = new Date(); // Fecha actual
+
+            // Comparar fechas (sin horas)
+            if (selectedDate < new Date(today.setHours(0, 0, 0, 0))) {
+                const confirmSelection = confirm("Has seleccionado una fecha anterior a la actual. ¿Deseas continuar?");
+                if (!confirmSelection) {
+                    // Si no confirma, limpiar el campo de fecha
+                    dateInput.value = '';
+                }
+            }
+        });
+
+        // Mostrar u ocultar campos según la forma de pago seleccionada
+        formaPagoSelect.addEventListener('change', function() {
+            const selectedPaymentMethod = formaPagoSelect.options[formaPagoSelect.selectedIndex].text.toLowerCase();
+
+            if (selectedPaymentMethod.includes('efectivo') && selectedPaymentMethod.includes('tarjeta')) {
+                cashGroup.style.display = '';
+                cardGroup.style.display = '';
+            } else if (selectedPaymentMethod.includes('efectivo')) {
+                cashGroup.style.display = '';
+                cardGroup.style.display = 'none';
+            } else if (selectedPaymentMethod.includes('banco')) {
+                cashGroup.style.display = 'none';
+                cardGroup.style.display = '';
+            } else {
+                cashGroup.style.display = 'none';
+                cardGroup.style.display = 'none';
+            }
+            actualizarCambio();  // Actualizar el cambio cuando se cambie la forma de pago
+        });
+
+        // Función para calcular y mostrar el cambio
+        function actualizarCambio() {
+            const monto = parseFloat(montoInput.value) || 0;
+            const pagadoEnEfectivo = parseFloat(cashInput.value) || 0;
+            const pagadoConTarjeta = parseFloat(cardInput.value) || 0;
+            const totalPagado = pagadoEnEfectivo + pagadoConTarjeta;
+            const cambio = totalPagado - monto;
+
+            // Mostrar el cambio solo si el valor es mayor a 0
+            cambioInput.value = cambio >= 0 ? cambio.toFixed(2) : '0.00';
+        }
+
+        // Escuchar cambios en los inputs de efectivo y tarjeta para actualizar el cambio
+        cashInput.addEventListener('input', actualizarCambio);
+        cardInput.addEventListener('input', actualizarCambio);
+
+        // También puedes escuchar cambios en el monto para recalcular el cambio
+        montoInput.addEventListener('input', actualizarCambio);
+
+        // Ejecutar la función de inicialización cuando se cargue la página
+        initPaymentFields();
+    });
+</script>
+
+
+{% endblock %}

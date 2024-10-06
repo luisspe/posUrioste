@@ -1,0 +1,104 @@
+{% extends "posApp/base.html" %}
+
+{% block pageContent %}
+<div class="mdc-layout-grid__cell stretch-card mdc-layout-grid__cell--span-12">
+    <div class="mdc-card py-2">
+        <div class="d-flex justify-content-between align-items-center">
+            <h4 class="card-title mb-0">Planes de Inscripción</h4>
+        </div>
+    </div>
+</div>
+<div class="mdc-layout-grid__cell stretch-card mdc-layout-grid__cell--span-12">
+    <div class="mdc-card">
+        <div class="table-responsive">
+            <table class="table table-striped table-bordered">
+                <colgroup>
+               
+                    <col width="30%">
+                    <col width="30%">
+                    <col width="10%">
+                    <col width="10%">
+                    <col width="10%">
+                    <col width="10%">
+                </colgroup>
+                <thead>
+                    <tr>
+    
+                        <th class="text-center py-1">Nombre</th>
+                        <th class="text-center py-1">Descripción</th>
+                        <th class="text-center py-1">Precio</th>
+                        <th class="text-center py-1">Duración (días)</th>
+                        <th class="text-center py-1">Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for plan in plans %}
+                    <tr>
+
+                        <td class="px-2 py-1 text-start">{{ plan.nombre }}</td>
+                        <td class="px-2 py-1 text-start">{{ plan.descripcion }}</td>
+                        <td class="px-2 py-1 text-center">{{ plan.precio }}</td>
+                        <td class="px-2 py-1 text-center">{{ plan.duracion }}</td> <!-- Nueva columna para duración -->
+                        <td class="px-2 py-1 text-center">
+                            <a href="{% url 'editar-plan' plan.pk %}" class="mdc-button mdc-button--raised p-1 icon-button filled-button--primary mdc-ripple-upgraded" title="Editar">
+                                <i class="material-icons mdc-button__icon">edit</i>
+                            </a>
+                            <button class="mdc-button mdc-button--raised p-1 icon-button filled-button--danger mdc-ripple-upgraded delete-data" type="button" data-id="{{ plan.pk }}" title="Delete">
+                                <i class="material-icons mdc-button__icon">delete_outline</i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock pageContent %}
+
+{% block ScriptBlock %}
+<script>
+    $(function() {
+        
+        $('.delete-data').click(function() {
+            _conf("¿Quieres eliminar este plan de inscripción?", "delete_plan", [$(this).attr('data-id')])
+        })
+
+        $('#uni_modal').on('shown.bs.modal', function() {
+            $('#category_id').select2({
+                placeholder: "Selecciona una categoría aquí",
+                width: '100%',
+                dropdownParent: $('#uni_modal')
+            })
+        })
+    })
+
+    function delete_plan(id) {
+        start_loader();
+        $.ajax({
+            headers: {
+                "X-CSRFToken": '{{csrf_token}}'
+            },
+            url: "{% url 'delete-plan' %}",
+            method: "POST",
+            data: {
+                id: id
+            },
+            dataType: "json",
+            error: err => {
+                console.log(err)
+                alert_toast("Ocurrió un error.", 'error');
+                end_loader();
+            },
+            success: function(resp) {
+                if (typeof resp == 'object' && resp.status == 'success') {
+                    location.reload();
+                } else {
+                    alert_toast("Ocurrió un error.", 'error');
+                    end_loader();
+                }
+            }
+        })
+    }
+</script>
+{% endblock ScriptBlock %}

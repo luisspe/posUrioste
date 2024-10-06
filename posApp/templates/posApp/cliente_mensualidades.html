@@ -1,0 +1,52 @@
+{% extends "posApp/base.html" %}
+
+{% block pageContent %}
+<div class="mdc-layout-grid__cell stretch-card mdc-layout-grid__cell--span-12">
+    <div class="mdc-card py-2">
+        <div class="card-header">
+            <h2 class="card-title">Mensualidades de {{ cliente.nombre }} {{ cliente.apellido_paterno }} {{ cliente.apellido_materno }}</h2>
+        </div>
+        <div class="card-body">
+            {% if mensualidades %}
+                <div class="table-responsive">
+                    <table class="table table-striped table-bordered">
+                        <thead class="thead-dark">
+                            <tr>
+                                <th scope="col">Fecha de Vencimiento</th>
+                                <th scope="col">Monto</th>
+                                <th scope="col">Estado</th>
+                                <th scope="col">Fecha de Pago</th>
+                                <th scope="col">Plan de Inscripción</th>
+                                <th scope="col">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for mensualidad in mensualidades %}
+                            <tr>
+                                <td>{{ mensualidad.fecha_vencimiento }}</td>
+                                <td>{{ mensualidad.monto }}</td>
+                                <td>{{ mensualidad.estado }}</td>
+                                <td>{{ mensualidad.fecha_pago }}</td>
+                                <td>{{ mensualidad.plan_inscripcion.nombre }}</td>
+                                {% if request.user.is_manager %}
+                                <td>
+                                    <form method="post" action="{% url 'eliminar_mensualidad' cliente.id mensualidad.id %}" style="display:inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-danger">Eliminar</button>
+                                    </form>
+                                
+                                </td>
+                                {% endif %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p>No hay mensualidades registradas para este cliente.</p>
+            {% endif %}
+            <a href="{% url 'pagar_primera_mensualidad' cliente.id %}" class="btn btn-primary mt-3">Registrar Mensualidad</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

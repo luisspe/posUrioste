@@ -1,150 +1,168 @@
-{% load static %}
+{%load static%}
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"> {% if page_title %}
-    <title>{{ page_title }} | ACUATICA URIOSTE</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% if page_title %}
+    <title>{{ page_title }} | URIOSTE</title>
     {% else %}
-    <title>POS ACUATICA URIOSTE</title>
+    <title>URIOSTE</title>
     {% endif %}
-    <link rel="stylesheet" href="{% static 'posAPP/assets/default/css/style.css' %}">
-    <link rel="stylesheet" href="{% static 'posAPP/assets/bootstrap/css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'posApp/assets/default/css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'posApp/assets/bootstrap/css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'posApp/assets/material-admin/vendors/mdi/css/materialdesignicons.min.css' %}">
+    <link rel="stylesheet" href="{% static 'posApp/assets/material-admin/vendors/css/vendor.bundle.base.css' %}">
+    <link rel="stylesheet" href="{% static 'posApp/assets/material-admin/vendors/flag-icon-css/css/flag-icon.min.css' %}">
+    <link rel="stylesheet" href="{% static 'posApp/assets/material-admin/vendors/jvectormap/jquery-jvectormap.css' %}">
+    <link rel="stylesheet" href="{% static 'posApp/assets/material-admin/css/demo/style.css' %}">
+    <link rel="shortcut icon" href="{% static 'posApp/assets/material-admin/images/favicon.png' %}" />
+    <script src="{% static 'posApp/assets/default/js/jquery-3.6.0.min.js' %}"></script>
+    <script src="{% static 'posApp/assets/bootstrap/js/bootstrap.min.js' %}"></script>
+    <script src="{% static 'posApp/assets/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+    <script src="{% static 'posApp/assets/bootstrap/js/popper.min.js' %}"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #72edf2 10%, #5151e5 100%);
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: 'Arial', sans-serif;
+            position: relative;
+        }
 
-    <!-- plugins:css -->
-    <link rel="stylesheet" href="{% static 'posAPP/assets/material-admin/vendors/mdi/css/materialdesignicons.min.css' %}">
-    <link rel="stylesheet" href="{% static 'posAPP/assets/material-admin/vendors/css/vendor.bundle.base.css' %}">
-    <!-- endinject -->
-    <!-- Plugin css for this page -->
-    <link rel="stylesheet" href="{% static 'posAPP/assets/material-admin/vendors/flag-icon-css/css/flag-icon.min.css' %}">
-    <link rel="stylesheet" href="{% static 'posAPP/assets/material-admin/vendors/jvectormap/jquery-jvectormap.css' %}">
-    <!-- End plugin css for this page -->
-    <!-- Layout styles -->
-    <link rel="stylesheet" href="{% static 'posAPP/assets/material-admin/css/demo/style.css' %}">
-    <!-- End layout styles -->
-    <link rel="shortcut icon" href="{% static 'posAPP/assets/material-admin/images/favicon.png' %}" />
-    <script src="{% static 'posAPP/assets/default/js/jquery-3.6.0.min.js' %}">
-    </script>
-    <script src="{% static 'posAPP/assets/bootstrap/js/bootstrap.min.js' %}"></script>
-    <script src="{% static 'posAPP/assets/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
-    <script src="{% static 'posAPP/assets/bootstrap/js/popper.min.js' %}"></script>
+        .background-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url("https://i.ibb.co/3MnRn8b/aquapolis.jpg" ) no-repeat center;
+            background-size: cover;
+            opacity: 0.5;
+            z-index: 1;
+        }
+
+        .container {
+            position: relative;
+            z-index: 2;
+        }
+
+        .card {
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            background-color: white;
+        }
+
+        .card-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            font-size: 14px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        .btn-primary {
+            background-color: #007bff;
+            border: none;
+            font-size: 16px;
+            padding: 10px;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+
+        .form-control {
+            border-radius: 5px;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+            transition: box-shadow 0.3s ease;
+        }
+
+        .form-control:focus {
+            box-shadow: 0 0 5px rgba(81, 81, 229, 0.5);
+        }
+
+        .form-icon {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #aaa;
+        }
+
+        .form-group {
+            position: relative;
+        }
+
+        .form-control {
+            padding-left: 40px;
+        }
+    </style>
 </head>
 
 <body>
-    <script src="{% static 'posAPP/assets/material-admin/js/preloader.js' %}"></script>
-    <div class="body-wrapper">
-        <div class="main-wrapper">
-            <div class="page-wrapper full-page-wrapper d-flex align-items-center justify-content-center">
-                <main class="auth-page">
-                    <div class="mdc-layout-grid">
-                        <div class="mdc-layout-grid__inner justify-content-center">
-                            <div class="mdc-layout-grid__cell--span-2-desktop"></div>
-                            <div class="mdc-card mdc-layout-grid__cell--span-8-desktop mdc-layout-grid__cell--span-1-tablet mb-5">
-                                <h3 class="text-center">Punto de ventas Acuatica Urioste</h3>
-                                <img style="display: block; margin: 0 auto; max-width: 150px; height: auto;" src="/static/posAPP/assets/material-admin/images/sidebar/logo.jpg" alt="">
+    <div class="background-overlay"></div>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h3 class="card-title text-center">Inicia sesión</h3>
+                        <form id="login-user" method="POST" action="{% url 'login-user' %}">
+                            {% csrf_token %}
+                            <div class="mb-3 form-group">
+                                
+                                <label for="username" class="form-label">Usuario</label>
+                                <input type="text" class="form-control" id="username" name="username" required>
                             </div>
-                        </div>
-                        <div class="mdc-layout-grid__inner">
-                            <div class="stretch-card mdc-layout-grid__cell--span-4-desktop mdc-layout-grid__cell--span-1-tablet"></div>
-                            <div class="mdc-layout-grid__cell stretch-card mdc-layout-grid__cell--span-4-desktop mdc-layout-grid__cell--span-6-tablet">
-                                <div class="mdc-card">
-                                    <form id="login-user">
-                                        {% csrf_token %}
-                                        <div class="mdc-layout-grid">
-                                            <div class="mdc-layout-grid__inner">
-                                                <form action="" id="login" method="post">
-                                                    <div class="mdc-layout-grid__cell stretch-card mdc-layout-grid__cell--span-12">
-                                                        <div class="mdc-text-field w-100">
-                                                            <input class="mdc-text-field__input" name="username" id="text-field-hero-input">
-                                                            <div class="mdc-line-ripple"></div>
-                                                            <label for="text-field-hero-input" class="mdc-floating-label">Usuario</label>
-                                                        </div>
-                                                    </div>
-                                                    <div class="mdc-layout-grid__cell stretch-card mdc-layout-grid__cell--span-12">
-                                                        <div class="mdc-text-field w-100">
-                                                            <input class="mdc-text-field__input" name="password" type="password" id="text-field-hero-input">
-                                                            <div class="mdc-line-ripple"></div>
-                                                            <label for="text-field-hero-input" class="mdc-floating-label">Contrasena</label>
-                                                        </div>
-                                                    </div>
-                                                    <div class="mdc-layout-grid__cell stretch-card mdc-layout-grid__cell--span-12">
-                                                        <button class="mdc-button mdc-button--raised w-100">
-                                                            Login
-                                                        </button>
-                                                    </div>
-                                                </form>
-                                            </div>
-                                        </div>
-                                    </form>
-                                </div>
+                            <div class="mb-3 form-group">
+                                
+                                <label for="password" class="form-label">Contraseña</label>
+                                <input type="password" class="form-control" id="password" name="password" required>
                             </div>
-                            <div class="stretch-card mdc-layout-grid__cell--span-4-desktop mdc-layout-grid__cell--span-1-tablet"></div>
-                        </div>
+                            <button type="submit" class="btn btn-primary w-100">Login</button>
+                        </form>
                     </div>
-                </main>
+                </div>
             </div>
         </div>
     </div>
     <script>
-        window.start_loader = function() {
-            $('body').removeClass('loaded')
+        function start_loader() {
+            $('body').append('<div id="preloader"><div class="loader"></div></div>');
         }
-        window.end_loader = function() {
-            $('body').addClass('loaded')
-        }
-        window.uni_modal = function($title = '', $url = '', $size = "") {
-            start_loader()
-            $.ajax({
-                url: $url,
-                error: err => {
-                    console.log()
-                    alert("An error occured")
-                },
-                success: function(resp) {
-                    if (resp) {
-                        $('#uni_modal .modal-title').html($title)
-                        $('#uni_modal .modal-body').html(resp)
-                        if ($size != '') {
-                            $('#uni_modal .modal-dialog').addClass($size + '  modal-dialog-centered')
-                        } else {
-                            $('#uni_modal .modal-dialog').removeAttr("class").addClass("modal-dialog modal-md modal-dialog-centered")
-                        }
-                        $('#uni_modal').modal({
-                            backdrop: 'static',
-                            keyboard: false,
-                            focus: true
-                        })
-                        $('#uni_modal').modal('show')
-                        end_loader()
-                    }
-                }
-            })
-        }
-        window._conf = function($msg = '', $func = '', $params = []) {
-            $('#confirm_modal #confirm').attr('onclick', $func + "(" + $params.join(',') + ")")
-            $('#confirm_modal .modal-body').html($msg)
-            $('#confirm_modal').modal('show')
-        }
-        $(function() {
 
-        })
-    </script>
+        function end_loader() {
+            $('#preloader').remove();
+        }
 
-    <script src="{% static 'posAPP/assets/material-admin/vendors/js/vendor.bundle.base.js' %}"></script>
-    <script src="{% static 'posAPP/assets/material-admin/js/material.js' %}"></script>
-    <script src="{% static 'posAPP/assets/material-admin/js/misc.js' %}"></script>
-    <script src="{% static 'posAPP/assets/material-admin/js/dashboard.js' %}"></script>
-    <script>
-        $(function() {
-            $('#login-user').submit(function(e) {
+        function alert_toast(message, type) {
+            var alertBox = $('<div>').addClass('alert alert-' + type + ' err-msg').text(message).hide();
+            $('body').prepend(alertBox);
+            alertBox.show('slow');
+        }
+
+        $(function () {
+            $('#login-user').submit(function (e) {
                 e.preventDefault();
-                var _this = $(this)
+                var _this = $(this);
                 $('.err-msg').remove();
-                var el = $('<div>')
-                el.addClass("alert alert-danger err-msg")
-                el.hide()
+                var el = $('<div>').addClass("alert alert-danger err-msg").hide();
                 if (_this[0].checkValidity() == false) {
                     _this[0].reportValidity();
                     return false;
@@ -163,30 +181,34 @@
                     type: 'POST',
                     dataType: 'json',
                     error: err => {
-                        console.log(err)
+                        console.log(err);
                         alert_toast("An error occured", 'error');
                         end_loader();
                     },
-                    success: function(resp) {
+                    success: function (resp) {
                         if (typeof resp == 'object' && resp.status == 'success') {
-                            el.removeClass("alert alert-danger err-msg")
-                            location.href = "{% url 'home-page' %}"
+                            el.removeClass("alert alert-danger err-msg");
+                            location.href = resp.redirect_url;
                         } else if (resp.status == 'failed' && !!resp.msg) {
-                            el.text(resp.msg)
+                            el.text(resp.msg);
                         } else {
                             el.text("An error occured", 'error');
                             end_loader();
-                            console.err(resp)
+                            console.err(resp);
                         }
-                        _this.prepend(el)
-                        el.show('slow')
+                        _this.prepend(el);
+                        el.show('slow');
                         $("html, body, .modal").scrollTop(0);
-                        end_loader()
+                        end_loader();
                     }
-                })
-            })
-        })
+                });
+            });
+        });
     </script>
+    <script src="{% static 'posApp/assets/material-admin/vendors/js/vendor.bundle.base.js' %}"></script>
+    <script src="{% static 'posApp/assets/material-admin/js/material.js' %}"></script>
+    <script src="{% static 'posApp/assets/material-admin/js/misc.js' %}"></script>
+    <script src="{% static 'posApp/assets/material-admin/js/dashboard.js' %}"></script>
 </body>
 
 </html>

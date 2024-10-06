@@ -1,10 +1,37 @@
-{% extends "posApp/base.html" %} {% block pageContent %}
+{% extends "posApp/base.html" %} 
+{% block pageContent %}
 <div class="mdc-layout-grid__cell stretch-card mdc-layout-grid__cell--span-12">
     <div class="mdc-card py-2">
         <div class="d-flex justify-content-between align-items-center">
             <h4 class="card-title mb-0">Lista de clientes</h4>
             <form method="GET">
-                <input class="" type="text" name="q" value="{{ query }}" placeholder="Buscar" autocapitalize="words" />
+                <label for="query">Buscar por nombre:</label>
+                <input class="" type="text" name="q" id="query" value="" placeholder="Buscar" autocapitalize="words" />
+                
+                <label for="estado_mensualidad">Estado de Mensualidad:</label>
+                <select name="estado_mensualidad" id="estado_mensualidad" onchange="this.form.submit()">
+                    <option value="">Todos</option>
+                    <option value="Al corriente" {% if estado_filtro == "Al corriente" %}selected{% endif %}>Al corriente</option>
+                    <option value="Vencido" {% if estado_filtro == "Vencido" %}selected{% endif %}>Vencido</option>
+                    <option value="Sin mensualidades" {% if estado_filtro == "Sin mensualidades" %}selected{% endif %}>Sin mensualidades</option>
+                </select>
+
+                <label for="horario">Horario:</label>
+                <select name="horario" id="horario" onchange="this.form.submit()">
+                    <option value="">Todos</option>
+                    {% for hour in horarios %}
+                    <option value="{{ hour }}" {% if horario_filtro == hour %}selected{% endif %}>{{ hour }}</option>
+                    {% endfor %}
+                </select>
+
+                <label for="plan_inscripcion">Plan de Inscripción:</label>
+                <select name="plan_inscripcion" id="plan_inscripcion" onchange="this.form.submit()">
+                    <option value="">Todos</option>
+                    {% for plan in planes_inscripcion %}
+                    <option value="{{ plan.id }}" {% if plan_inscripcion_filtro == plan.id|stringformat:"s" %}selected{% endif %}>{{ plan.nombre }}</option>
+                    {% endfor %}
+                </select>
+                
                 <button type="submit">Buscar</button>
             </form>
             <div class="text-start">
@@ -21,73 +48,68 @@
                     <col width="5%">
                     <col width="20%">
                     <col width="20%">
-                    <col width="25%">
                     <col width="15%">
                     <col width="15%">
+
                 </colgroup>
                 <thead>
                     <tr>
-                        <th class="text-center py-1">#</th>
+
                         <th class="text-center py-1">Nombre</th>
                         <th class="text-center py-1">Numero</th>
                         <th class="text-center py-1">Status</th>
-                        
+                        <th class="text-center py-1">Estado de Mensualidad</th>
+                        <th class="text-center py-1">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
+                    {% for client in clients %}
+                    <tr class="{% if client.estado_mensualidad == 'Vencido' %}bg-danger{% endif %}">
 
-                    {% if not results %}
-                        {% for client in clients|slice:"40" %}
-                        <tr>
-                            <td class="px-2 py-1 text-center">{{ client.id }}</td>
-                            <td class="px-2 py-1 text-start">{{ client.nombre }} {{ client.apellido_paterno }} {{ cleint.apellido_materno }}</td>
-                            <td class="px-2 py-1 text-start">{{ client.celular }}</td>
-                            
-                            <td class="px-2 py-1 text-center">
-                                {% if client.status == 1 %}
-                                <span class="badge bg-primary rounded-pill px-3">Activo</span> {% else %}
-                                <span class="badge bg-secondary rounded-pill px-3">Inactivo</span> {% endif %}
+                        <td class="px-2 py-1 text-start">{{ client.nombre }} {{ client.apellido_paterno }} {{ client.apellido_materno }}</td>
+                        <td class="px-2 py-1 text-start">{{ client.celular }}</td>
+                        <td class="px-2 py-1 text-center">
+                            {% if client.status == 1 %}
+                            <span class="badge bg-primary rounded-pill px-3">Activo</span>
+                            {% elif client.status == 2 %}
+                                <span class="badge bg-secondary rounded-pill px-3">Inactivo</span>
+                            {% elif client.status == 3 %}
+                                <span class="badge bg-warning rounded-pill px-3">Baja Temporal</span>
+                            {% elif client.status == 4 %}
+                                <span class="badge bg-danger rounded-pill px-3">Baja Definitiva</span>
+                            {% endif %}
                             </td>
-                            <td class="px-2 py-1 text-center">
-                                <button class="mdc-button mdc-button--raised p-1 icon-button filled-button--light mdc-ripple-upgraded edit-data" type="button" data-id="{{ client.pk }}" title="Edit">
-                                    <i class="material-icons mdc-button__icon">edit</i>
-                                </button>
-                                <button class="mdc-button mdc-button--raised p-1 icon-button filled-button--danger mdc-ripple-upgraded delete-data" type="button" data-id="{{ client.pk }}" title="Delete">
-                                    <i class="material-icons mdc-button__icon">deleteoutline</i>
-                                </button>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    {% endif %}
-                    {% if results %}
-                        {% for client in results %}
-                        <tr>
-                            <td class="px-2 py-1 text-center">{{ client.id }}</td>
-                            <td class="px-2 py-1 text-start">{{ client.nombre }} {{ client.apellido_paterno }} {{ cleint.apellido_materno }}</td>
-                            <td class="px-2 py-1 text-start">{{ client.celular }}</td>
-                            
-                            <td class="px-2 py-1 text-center">
-                                {% if client.status == 1 %}
-                                <span class="badge bg-primary rounded-pill px-3">Activo</span> {% else %}
-                                <span class="badge bg-secondary rounded-pill px-3">Inactivo</span> {% endif %}
-                            </td>
-                            <td class="px-2 py-1 text-center">
-                                <button class="mdc-button mdc-button--raised p-1 icon-button filled-button--light mdc-ripple-upgraded edit-data" type="button" data-id="{{ client.pk }}" title="Edit">
-                                    <i class="material-icons mdc-button__icon">edit</i>
-                                </button>
-                                <button class="mdc-button mdc-button--raised p-1 icon-button filled-button--danger mdc-ripple-upgraded delete-data" type="button" data-id="{{ client.pk }}" title="Delete">
-                                    <i class="material-icons mdc-button__icon">deleteoutline</i>
-                                </button>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    {% endif %}
+                        <td class="px-2 py-1 text-center">
+                            {% if client.estado_mensualidad == 'Vencido' %}
+                            <span class="badge bg-danger rounded-pill px-3">Vencido</span>
+                            {% elif client.estado_mensualidad == 'Al corriente' %}
+                            <span class="badge bg-success rounded-pill px-3">Al corriente</span>
+                            {% else %}
+                            <span class="badge bg-warning rounded-pill px-3">Sin mensualidades</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-2 py-1 text-center">
+                            <button class="mdc-button mdc-button--raised p-1 icon-button filled-button--light mdc-ripple-upgraded edit-data" type="button" data-id="{{ client.pk }}" title="Edit">
+                                <i class="material-icons mdc-button__icon">edit</i>
+                            </button>
+                            <button class="mdc-button mdc-button--raised p-1 icon-button filled-button--danger mdc-ripple-upgraded delete-data" type="button" data-id="{{ client.pk }}" title="Delete">
+                                <i class="material-icons mdc-button__icon">deleteoutline</i>
+                            </button>
+                            {% if client.estado_mensualidad == 'Vencido' %}
+                            <button class="mdc-button mdc-button--raised p-1 icon-button filled-button--primary mdc-ripple-upgraded add-payment" type="button" data-id="{{ client.pk }}" title="Add Payment">
+                                <a href="{% url 'pagar_primera_mensualidad' client.pk %}"><i class="material-icons mdc-button__icon">add</i></a>
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
 </div>
-{% endblock pageContent %} {% block ScriptBlock %}
+{% endblock pageContent %} 
+{% block ScriptBlock %}
 <script>
     $(function() {
         $('#create_new').click(function() {
@@ -97,40 +119,40 @@
             uni_modal("Editar Cliente", "{% url 'manage_clients-page' %}?id=" + $(this).attr('data-id'))
         })
         $('.delete-data').click(function() {
-            _conf("Are you sure to delete this Product?", "delete_client", [$(this).attr('data-id')])
+            _conf("¿Estás seguro de eliminar este cliente?", "delete_client", [$(this).attr('data-id')])
         })
 
         $('#uni_modal').on('shown.bs.modal', function() {
             $('#category_id').select2({
-                placeholder: "Please Select Category Here",
+                placeholder: "Selecciona una categoría aquí",
                 width: '100%',
                 dropdownParent: $('#uni_modal')
             })
         })
     })
 
-    function delete_product($id) {
+    function delete_client(id) {
         start_loader();
         $.ajax({
             headers: {
                 "X-CSRFToken": '{{csrf_token}}'
             },
-            url: "{% url 'delete-product' %}",
+            url: "{% url 'delete_cliente' %}",
             method: "POST",
             data: {
-                id: $id
+                id: id
             },
             dataType: "json",
             error: err => {
                 console.log(err)
-                alert_toast("An error occured.", 'error');
+                alert_toast("Ocurrió un error.", 'error');
                 end_loader();
             },
             success: function(resp) {
                 if (typeof resp == 'object' && resp.status == 'success') {
                     location.reload();
                 } else {
-                    alert_toast("An error occured.", 'error');
+                    alert_toast("Ocurrió un error.", 'error');
                     end_loader();
                 }
             }

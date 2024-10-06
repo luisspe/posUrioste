@@ -68,8 +68,8 @@ class PlanInscripcion(models.Model):
 
 
 class Levels(models.Model):
-    level = models.CharField(max_length=100)
-
+    level = models.CharField(max_length=100, blank=True, null=True)
+    sucursal = models.ForeignKey(Sucursal, on_delete=models.SET_NULL, null=True, blank=True)
     def __str__(self):
         return str(self.level)
     
@@ -126,7 +126,9 @@ class Clientes(models.Model):
     horario = models.TextField()
     nivel = models.ForeignKey(Levels, on_delete=models.DO_NOTHING, null=True, blank=True)
     status = models.IntegerField(default=1)
-    sucursal = models.ForeignKey(Sucursal, on_delete=models.SET_NULL, null=True, blank=True) 
+    plan_inscripcion = models.ForeignKey(PlanInscripcion, on_delete=models.SET_NULL, null=True, blank=True)
+    sucursal = models.ForeignKey(Sucursal, on_delete=models.SET_NULL, null=True, blank=True)
+    estado_mensualidad = models.CharField(max_length=20, default='Sin mensualidades') 
 
     def __str__(self):
         return str(self.nombre)
@@ -194,7 +196,8 @@ class Sales(models.Model):
 
 class salesItems(models.Model):
     sale_id = models.ForeignKey(Sales,on_delete=models.CASCADE)
-    product_id = models.ForeignKey(Products,on_delete=models.CASCADE)
+    product_id = models.ForeignKey(Products,on_delete=models.CASCADE, blank=True, null=True)
+    product_name = models.CharField(max_length=255, blank=True, null=True)  # Nuevo campo
     price = models.FloatField(default=0)
     qty = models.FloatField(default=0)
     total = models.FloatField(default=0)

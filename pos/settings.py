@@ -71,10 +71,13 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                # Agrega aquí tu nuevo context processor
+                'posApp.context_processors.user_profile',
             ],
         },
     },
 ]
+
 
 WSGI_APPLICATION = 'pos.wsgi.application'
 

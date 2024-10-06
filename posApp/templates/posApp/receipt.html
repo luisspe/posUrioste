@@ -1,10 +1,7 @@
-{% load humanize %}
 <style>
     #uni_modal .modal-footer {
         display: none
     }
-
-   
 
     @media print {
         html, body {
@@ -20,19 +17,15 @@
 <div class="container-fluid">
     <div id="outprint">
         <div class="lh-1">
-            
-            <img style="display: block; margin: 0 auto; max-width: 80px; height: auto;" src="/static/posAPP/assets/material-admin/images/sidebar/logo.jpg" alt="">
+            <img style="display: block; margin: 0 auto; max-width: 80px; height: auto;" src="/static/posApp/assets/material-admin/images/sidebar/logo.jpg" alt="">
         </div>
         <hr>
         <div class="lh-1">
             <div>
                 <span>Fecha:</span> {{ transaction.date_added }} <br>
                 <span>Folio de venta:</span> {{ transaction.code }} <br>
-                {% for items in salesItems|slice:"1"  %}
-                
-                
+                {% for items in salesItems|slice:"1" %}
                 <span>Cliente: <strong>{{ items.client.nombre }} {{ items.client.apellido_paterno }} {{ items.client.apellido_materno }}</strong></span> <br>
-                    
                 {% endfor %}
                 {% if sales %}
                     <span>Realizo venta: </span><span><strong>{{ sales.usuario }}</strong></span>
@@ -48,42 +41,42 @@
             </div>
             {% for item in salesItems %}
             <div class="d-flex w-100 align-items-end">
-                <div class="col-2 text-center fw-bold">{{ item.qty|intcomma|floatformat:0 }}</div>
+                <div class="col-2 text-center fw-bold">{{ item.qty }}</div>
                 <div class="col-6 fw-bold text-center">
                     <div class="lh-1">
-                        <small>{{ item.product_id.name }}</small><br>
-                        
-                        
+                        <small>
+                            {% if item.product_id %}
+                                {{ item.product_id.name }}
+                            {% else %}
+                                {{ item.product_name }}
+                            {% endif %}
+                        </small><br>
                     </div>
                 </div>
-                
- 
-                <div class="col-4 text-end fw-bold">{{ item.total|intcomma }}</div>
+                <div class="col-4 text-end fw-bold">{{ item.total }}</div>
             </div>
             {% endfor %}
             <hr>
             <div class="d-flex w-100 align-items-end">
                 <div class="col-6 text-start fw-bold">Total</div>
-                <div class="col-6 text-end fw-bold">{{ transaction.grand_total|intcomma }}</div>
-                
+                <div class="col-6 text-end fw-bold">{{ transaction.grand_total }}</div>
             </div>
             <div class="d-flex w-100 align-items-end">
                 {% if sales %}
                 <div class="col-6 text-start fw-bold">Tipo de pago: {{ sales.tipoPago }}</div>
                 {% endif %}
-                
             </div>
             <div class="d-flex w-100 align-items-end">
                 <div class="col-6 text-start fw-bold">Pagado efectivo</div>
-                <div class="col-6 text-end fw-bold">{{ transaction.tendered_amount|intcomma }}</div>
+                <div class="col-6 text-end fw-bold">{{ transaction.tendered_amount }}</div>
             </div>
             <div class="d-flex w-100 align-items-end">
                 <div class="col-6 text-start fw-bold">Pagado tarjeta</div>
-                <div class="col-6 text-end fw-bold">{{ transaction.tendered_amount_card|intcomma }}</div>
+                <div class="col-6 text-end fw-bold">{{ transaction.tendered_amount_card }}</div>
             </div>
             <div class="d-flex w-100 align-items-end">
                 <div class="col-6 text-start fw-bold">Cambio</div>
-                <div class="col-6 text-end fw-bold">{{ transaction.amount_change|intcomma }}</div>
+                <div class="col-6 text-end fw-bold">{{ transaction.amount_change }}</div>
             </div>
             <div class="d-flex w-100 align-items-center">
                 {% if sales %}
@@ -97,7 +90,7 @@
     <div class="clear-fix py-3"></div>
     <div class="d-flex w-100 justify-content-end">
         <button class="btn btn-light bg-gradient border rounded-0 btn-sm me-1" type="button" id="receipt_print"><i class="mdi mdi-printer"></i> Imprimir</button>
-        <button class="btn btn-secondary bg-gradient border rounded-0 btn-sm" type="button" data-bs-dismiss="modal"><i class="mdi mdi-close"></i> Cerrar</button>
+        <button class="btn btn-secondary bg-gradient border rounded-0 btn-sm" type="button" data-bs-dismiss="modal"><i class="mdi mdi-close"></i> Cerrar </button>
     </div>
 </div>
 <script>

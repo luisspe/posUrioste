@@ -1,0 +1,193 @@
+{% extends "posApp/base.html" %}
+
+{% block pageContent %}
+<div class="mdc-layout-grid__cell stretch-card mdc-layout-grid__cell--span-12">
+    <div class="mdc-card py-2">
+        <div class="d-flex justify-content-between align-items-center">
+            <h4 class="card-title mb-0">Seleccionar Múltiples Mensualidades</h4>
+        </div>
+        <div class="card-body">
+            <form method="post" action="{% url 'generar-mensualidades' cliente.id %}">
+                {% csrf_token %}
+                
+                <!-- Selección del plan de inscripción -->
+                <div class="form-group">
+                    <label for="id_plan_inscripcion">Plan Inscripción:</label>
+                    <select name="plan_inscripcion" id="id_plan_inscripcion" class="form-control" required>
+                        <option value="">Selecciona un plan</option>
+                        {% for plan in planes_inscripcion %}
+                        <option value="{{ plan.id }}">{{ plan.nombre }} - ${{ plan.precio }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Selección de meses -->
+                <div class="form-group">
+                    <label for="meses">Selecciona los meses</label>
+                    <div class="row">
+                        <div class="col-md-6">
+                            {% for mes in meses_disponibles|slice:":6" %}
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="meses[]" value="{{ mes }}" id="mes_{{ mes }}">
+                                <label class="form-check-label" for="mes_{{ mes }}">
+                                    {{ mes }}
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="col-md-6">
+                            {% for mes in meses_disponibles|slice:"6:" %}
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="meses[]" value="{{ mes }}" id="mes_{{ mes }}">
+                                <label class="form-check-label" for="mes_{{ mes }}">
+                                    {{ mes }}
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Día de cobro -->
+                <div class="form-group">
+                    <label for="dia">Día de Cobro</label>
+                    <input type="number" name="dia" id="dia" class="form-control" placeholder="15" required>
+                </div>
+
+                <!-- Monto total -->
+                <div class="form-group">
+                    <label for="monto">Monto Total:</label>
+                    <input type="text" id="monto" class="form-control" readonly>
+                </div>
+
+                <!-- Tipo de pago -->
+                <div class="form-group">
+                    <label for="forma_pago">Forma de Pago:</label>
+                    <select name="forma_pago" id="forma_pago" class="form-control">
+                        {% for pago in formas_pago %}
+                        <option value="{{ pago.id }}">{{ pago.tipo }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Pago en efectivo -->
+                <div class="form-group" id="cash_group">
+                    <label for="tendered_amount_cash">Cantidad Pagada en Efectivo</label>
+                    <input type="number" step="0.01" name="tendered_amount_cash" id="tendered_amount_cash" class="form-control" value="0">
+                </div>
+
+                <!-- Pago con tarjeta -->
+                <div class="form-group" id="card_group">
+                    <label for="tendered_amount_card">Cantidad Pagada con Tarjeta</label>
+                    <input type="number" step="0.01" name="tendered_amount_card" id="tendered_amount_card" class="form-control" value="0">
+                </div>
+
+                <!-- Cambio -->
+                <div class="form-group">
+                    <label for="id_cambio">Cambio:</label>
+                    <input type="text" id="id_cambio" class="form-control" readonly>
+                </div>
+
+                <div class="text-end">
+                    <button type="submit" class="btn btn-primary bg-gradient rounded-0">Generar Mensualidades</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const planInscripcionSelect = document.getElementById('id_plan_inscripcion');
+        const mesesCheckboxes = document.querySelectorAll('input[name="meses[]"]');
+        const montoInput = document.getElementById('monto');
+        const formaPagoSelect = document.getElementById('forma_pago');
+        const cashGroup = document.getElementById('cash_group');
+        const cardGroup = document.getElementById('card_group');
+        const cashInput = document.getElementById('tendered_amount_cash');
+        const cardInput = document.getElementById('tendered_amount_card');
+        const cambioInput = document.getElementById('id_cambio');
+        let precioPlan = 0;
+
+        // Ocultar o mostrar los campos de efectivo y tarjeta según la forma de pago seleccionada
+        function actualizarFormaPago() {
+            const selectedPaymentMethod = formaPagoSelect.options[formaPagoSelect.selectedIndex].text.toLowerCase();
+            if (selectedPaymentMethod.includes('efectivo') && selectedPaymentMethod.includes('tarjeta')) {
+                cashGroup.style.display = '';
+                cardGroup.style.display = '';
+            } else if (selectedPaymentMethod.includes('efectivo')) {
+                cashGroup.style.display = '';
+                cardGroup.style.display = 'none';
+            } else if (selectedPaymentMethod.includes('banco')) {
+                cashGroup.style.display = 'none';
+                cardGroup.style.display = '';
+            } else {
+                cashGroup.style.display = 'none';
+                cardGroup.style.display = 'none';
+            }
+        }
+
+        // Función para actualizar el monto total
+        function actualizarMonto() {
+            let mesesSeleccionados = 0;
+            mesesCheckboxes.forEach((checkbox) => {
+                if (checkbox.checked) {
+                    mesesSeleccionados++;
+                }
+            });
+            const montoTotal = mesesSeleccionados * precioPlan;
+            montoInput.value = montoTotal.toFixed(2);
+            actualizarCambio();
+        }
+
+        // Función para calcular y mostrar el cambio
+        function actualizarCambio() {
+            const montoTotal = parseFloat(montoInput.value) || 0;
+            const pagadoEnEfectivo = parseFloat(cashInput.value) || 0;
+            const pagadoConTarjeta = parseFloat(cardInput.value) || 0;
+            const totalPagado = pagadoEnEfectivo + pagadoConTarjeta;
+            const cambio = totalPagado - montoTotal;
+
+            cambioInput.value = cambio >= 0 ? cambio.toFixed(2) : '0.00';
+        }
+        const planInscripcionOptions = {
+            {% for plan in planes_inscripcion %}
+            '{{ plan.id }}': {
+                'precio': {{ plan.precio|floatformat:2 }}
+            },
+            {% endfor %}
+        };
+
+        // Evento para actualizar el precio según el plan seleccionado
+        planInscripcionSelect.addEventListener('change', function() {
+            const selectedPlanId = this.value;
+            if (planInscripcionOptions.hasOwnProperty(selectedPlanId)) {
+                precioPlan = planInscripcionOptions[selectedPlanId].precio;
+            } else {
+                precioPlan = 0;
+            }
+            actualizarMonto();
+        });
+
+        // Evento para actualizar el monto cuando se seleccionan/desseleccionan meses
+        mesesCheckboxes.forEach((checkbox) => {
+            checkbox.addEventListener('change', actualizarMonto);
+        });
+
+        // Actualizar campos de pago cuando se cambia la forma de pago
+        formaPagoSelect.addEventListener('change', actualizarFormaPago);
+
+        // Escuchar cambios en los inputs de efectivo y tarjeta para recalcular el cambio
+        cashInput.addEventListener('input', actualizarCambio);
+        cardInput.addEventListener('input', actualizarCambio);
+
+        // Inicializar los campos al cargar la página
+        actualizarFormaPago();
+    });
+</script>
+{% endblock %}
+
+
+
+
+

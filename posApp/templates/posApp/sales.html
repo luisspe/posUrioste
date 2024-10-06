@@ -1,131 +1,260 @@
-{% extends "posApp/base.html" %} {% load humanize %} {% block pageContent %}
+{% extends "posApp/base.html" %}
+
+{% block pageContent %}
 <div class="mdc-layout-grid__cell stretch-card mdc-layout-grid__cell--span-12">
     <div class="mdc-card py-2">
-        <div class="d-flex justify-content-between align-items-center flex-wrap">
-            <h4 class="card-title mb-0">Ventas</h4>
-            <form method="GET" class="d-flex align-items-center flex-wrap">
-                <div class="form-group mb-2">
-                    <label for="start-date" class="form-label">Fecha de inicio:</label>
-                    <input type="date" name="start_date" id="start-date" class="form-control">
-                </div>
-            
-                <div class="form-group mx-sm-3 mb-2">
-                    <label for="end-date" class="form-label">Fecha final:</label>
-                    <input type="date" name="end_date" id="end-date" class="form-control">
-                </div>
-            
-                <div class="form-group mb-2 mr-3">
-                    <select name="cliente_id" id="cliente_id" class="form-select form-select-sm">
-                        {% if not clientes %}
-                        <option value="" disabled selected></option>
-                        {% else %}
-                        <option value="" disabled></option>
-                        {% endif %}
-                        <option value="" selected>General</option>
-                        {% for cliente in clientes  %}
-                            {% if cliente.id == cliente.id %}
-                            <option value="{{ cliente.id }}">{{ cliente.nombre }} {{ cliente.apellido_paterno  }} {{cliente.apellido_materno}}</option>
-                            {% else %}
-                            <option value="{{ cliente.id }}">{{ cliente.nombre }} {{ cliente.apellido_paterno }} {{cliente.apellido_materno}}</option>
-                            {% endif %}
-                        {% endfor %}
-                    </select>
-                </div>
-            
-                <div class="form-group mb-2">
-                    <select name="formapago_id" id="formapago_id" class="form-select form-select-sm">
-                        {% if not formapago %}
-                        <option value="" disabled selected></option>
-                        {% else %}
-                        <option value="" disabled></option>
-                        {% endif %}
-                        <option value="" selected>Selecciona forma de pago</option>
-                        {% for fpago in formapago  %}
-                            {% if fpago.id == fpago.id %}
-                            <option value="{{ fpago.id }}">{{ fpago.tipo }}</option>
-                            {% else %}
-                            <option value="{{ fpago.id }}">{{ fpago.tipo }}</option>
-                            {% endif %}
-                        {% endfor %}
-                    </select>
-                </div>
-            
-                <button class="btn btn-primary ml-2" type="submit">Buscar</button>
-            </form>
-
-            
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="card-title mb-0">Lista de ventas</h4>
+            <div>
+                <button id="captureBtn" class="btn btn-primary">Capturar Tabla</button>
+                <form method="GET" action="{% url 'export_sales_to_excel' %}" class="d-inline">
+                    <input type="hidden" name="start_date" value="{{ start_date }}">
+                    <input type="hidden" name="end_date" value="{{ end_date }}">
+                    <button type="submit" class="btn btn-success">Descargar Excel</button>
+                </form>
+            </div>
         </div>
+        <form method="GET" class="form-inline mb-2">
+            <div class="form-group mr-3 mb-2">
+                <label for="start_date">Fecha inicio:</label>
+                <input type="date" name="start_date" value="{{ start_date }}" class="form-control mx-sm-3" 
+                {% if not request.user.userprofile.is_manager %}disabled{% endif %}>
+            </div>
+            <div class="form-group mr-3 mb-2">
+                <label for="end_date">Fecha fin:</label>
+                <input type="date" name="end_date" value="{{ end_date }}" class="form-control mx-sm-3" 
+                {% if not request.user.userprofile.is_manager %}disabled{% endif %}>
+            </div>
+            <div class="form-group mr-3 mb-2">
+                <label for="cliente_id">Cliente:</label>
+                <select name="cliente_id" class="form-control mx-sm-3">
+                    <option value="">Todos los clientes</option>
+                    {% for cliente in clientes %}
+                    <option value="{{ cliente.id }}" {% if cliente.id == request.GET.cliente_id %}selected{% endif %}>{{ cliente.nombre }} {{cliente.apellido_materno}} {{cliente.apellido_paterno}}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group mr-3 mb-2">
+                <label for="formapago_id">Forma de pago:</label>
+                <select name="formapago_id" class="form-control mx-sm-3">
+                    <option value="">Todas las formas de pago</option>
+                    {% for pago in formapago %}
+                    <option value="{{ pago.id }}" {% if pago.id == request.GET.formapago_id %}selected{% endif %}>{{ pago.tipo }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group mr-3 mb-2">
+                <label for="producto_id">Producto:</label>
+                <select name="producto_id" class="form-control mx-sm-3">
+                    <option value="">Todos los productos</option>
+                    {% for producto in productos %}
+                    <option value="{{ producto.id }}" {% if producto.id == request.GET.producto_id %}selected{% endif %}>{{ producto.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group mr-3 mb-2">
+                <label for="categoria_id">Categoría:</label>
+                <select name="categoria_id" class="form-control mx-sm-3">
+                    <option value="">Todas las categorías</option>
+                    {% for categoria in categorias %}
+                    <option value="{{ categoria.id }}" {% if categoria.id == request.GET.categoria_id %}selected{% endif %}>{{ categoria.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group mr-3 mb-2">
+                <label for="tipo_inscripcion_id">Tipo de inscripción:</label>
+                <select name="tipo_inscripcion_id" class="form-control mx-sm-3">
+                    <option value="">Todos los tipos de inscripción</option>
+                    {% for tipo in tipos_inscripcion %}
+                    <option value="{{ tipo.id }}" {% if tipo.id == request.GET.tipo_inscripcion_id %}selected{% endif %}>{{ tipo.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Buscar</button>
+        </form>
     </div>
 </div>
+
 <div class="mdc-layout-grid__cell stretch-card mdc-layout-grid__cell--span-12">
     <div class="mdc-card">
         <div class="table-responsive">
-            <table class="table table-striped table-bordered">
+            <table id="salesTable" class="table table-striped table-bordered">
                 <colgroup>
                     <col width="5%">
                     <col width="20%">
-                    <col width="20%">
+                    <col width="15%">
                     <col width="25%">
                     <col width="15%">
-                    <col width="15%">
+                    <col width="10%">
+                    <col width="10%">
                 </colgroup>
                 <thead>
                     <tr>
                         <th class="text-center py-1">#</th>
                         <th class="text-center py-1">Fecha</th>
-                        <th class="text-center py-1">Codigo de Transc.</th>
-                        <th class="text-center py-1">Cliente</th>
-                        <th class="text-center py-1">Realizo</th>
+                        <th class="text-center py-1">Detalle</th>
+                        <th class="text-center py-1">Cliente/Concepto</th>
+                        <th class="text-center py-1">Realizado Por</th>
                         <th class="text-center py-1">Total</th>
-                        <th class="text-center py-1">Tipo de Pago</th>
-                        <th class="text-center py-1">Productos</th>
-                        <th class="text-center py-1">Accion</th>
-                        <th class="text-center py-1">Ventas: ${{ total }}</th>
-                        <th class="text-center py-1">Efectivo Dia: ${{ totalEfectivo}}</th>
-                        <th class="text-center py-1">Banco Dia: ${{ totalBanco}}</th>
+                        <th class="text-center py-1">Tipo de Pago</th> <!-- Nueva columna -->
+                        <th class="text-center py-1">Horario</th> <!-- Nueva columna -->
+                        <th class="text-center py-1">Plan de Inscripción</th> <!-- Nueva columna -->
+                        <th class="text-center py-1">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for sale in sale_data|slice:'::-1' %}
+                    {% for sale in sales_data %}
                     <tr>
                         <td class="px-2 py-1 text-center">{{ sale.id }}</td>
-                        <td class="px-2 py-1 text-start">{{ sale.date_added|date:'Y-m-d H:i' }}</td>
-                        <td class="px-2 py-1 text-start">{{ sale.code }}</td>
-                        <td class="px-2 py-1 text-start">{{ sale.client }} {{ sale.client.apellido_paterno  }} {{sale.client.apellido_materno}}</td>
-                        <td class="px-2 py-1 text-start">{{ sale.usuario.username }}</td>
-                        <td class="px-2 py-1 text-end">{{ sale.grand_total|intcomma }}</td>
-                        <td class="px-2 py-1 text-end">{{ sale.tipoPago }} </td>
-                        <td class="px-2 py-1 text-center">{{ sale.item_count|intcomma }}</td>
+                        <td class="px-2 py-1 text-start">{{ sale.date }}</td>
+                        <td class="px-2 py-1 text-start">Venta</td>
+                        <td class="px-2 py-1 text-start">{{ sale.client_name }}</td>
+                        <td class="px-2 py-1 text-start">{{ sale.done_by }}</td>
+                        <td class="px-2 py-1 text-end">{{ sale.total }}</td>
+                        <td class="px-2 py-1 text-center">{{ sale.payment_type }}</td>
+                        <td class="px-2 py-1 text-center">{{ sale.horario }}</td>
+                        <td class="px-2 py-1 text-center">{{ sale.plan_inscripcion }}</td>
                         <td class="px-2 py-1 text-center">
-                            <button class="mdc-button mdc-button--raised p-1 icon-button filled-button--light mdc-ripple-upgraded view-data" type="button" data-id="{{ sale.id }}" title="View Receipt">
+                            <!-- Example actions -->
+                            <button class="mdc-button mdc-button--raised p-1 icon-button filled-button--light mdc-ripple-upgraded view-data" type="button" data-id="{{ sale.id }}" title="Ver Recibo">
                                 <i class="material-icons mdc-button__icon">receipt</i>
                             </button>
-                            <button class="mdc-button mdc-button--raised p-1 icon-button filled-button--danger mdc-ripple-upgraded delete-data" type="button" data-id="{{ sale.id }}" data-code="{{ sale.code }}" title="Delete">
-                                <i class="material-icons mdc-button__icon">deleteoutline</i>
+                            <button class="mdc-button mdc-button--raised p-1 icon-button filled-button--danger mdc-ripple-upgraded delete-data" type="button" data-id="{{ sale.id }}" title="Eliminar">
+                                <i class="material-icons mdc-button__icon">delete_outline</i>
                             </button>
                         </td>
                     </tr>
                     {% endfor %}
+                    {% for salida in salida_data %}
+                    <tr class="table-danger">
+                        <td class="px-2 py-1 text-center">{{ salida.id }}</td>
+                        <td class="px-2 py-1 text-start">{{ salida.fecha|date:'Y-m-d' }}</td>
+                        <td class="px-2 py-1 text-start">Salida</td>
+                        <td class="px-2 py-1 text-start">{{ salida.concepto }}</td>
+                        <td class="px-2 py-1 text-start">N/A</td>
+                        <td class="px-2 py-1 text-end">-{{ salida.monto }}</td>
+                        <td class="px-2 py-1 text-center"></td>
+                        <td class="px-2 py-1 text-center"></td>
+                        <td class="px-2 py-1 text-center"></td>
+                    </tr>
+                    {% endfor %}
                 </tbody>
+                <tfoot>
+                    <tr>
+                        <th colspan="5" class="text-right">Total Ventas:</th>
+                        <th class="text-right">{{ total_ventas }}</th>
+                        <th></th>
+                    </tr>
+                    {% if total_efectivo %}
+                    <tr>
+                        <th colspan="5" class="text-right">Total Efectivo:</th>
+                        <th class="text-right">{{ total_efectivo }}</th>
+                        <th></th>
+                    </tr>
+                    {% endif %}
+                    {% if total_tarjeta %}
+                    <tr>
+                        <th colspan="5" class="text-right">Total Tarjeta:</th>
+                        <th class="text-right">{{ total_tarjeta }}</th>
+                        <th></th>
+                    </tr>
+                    {% endif %}
+                    <tr class="table-danger">
+                        <th colspan="5" class="text-right">Total Salidas:</th>
+                        <th class="text-right">-{{ total_salidas }}</th>
+                        <th></th>
+                    </tr>
+                    {% if neto >= 0 %}
+                    <tr class="table-success">
+                    {% else %}
+                    <tr class="table-danger">
+                    {% endif %}
+                        <th colspan="5" class="text-right">Neto:</th>
+                        <th class="text-right">{{ neto }}</th>
+                        <th></th>
+                    </tr>
+                </tfoot>
             </table>
         </div>
     </div>
 </div>
-{% endblock pageContent %} {% block ScriptBlock %}
+
+
+
+<style>
+    .table {
+        color: #333;
+        background-color: #fff;
+    }
+    .table thead th {
+        background-color: #f2f2f2;
+        color: #000;
+        font-weight: bold;
+    }
+    .table tbody tr {
+        border-bottom: 1px solid #ccc;
+    }
+    .table-danger {
+        background-color: #f8d7da;
+    }
+    .table-success {
+        background-color: #d4edda;
+    }
+    .mdc-button {
+        border-radius: 4px;
+    }
+    .icon-button {
+        width: 36px;
+        height: 36px;
+    }
+    .form-control, .form-select {
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        margin-right: 10px;
+    }
+    .bg-dark {
+        background-color: #fff !important;
+    }
+    .text-white {
+        color: #000 !important;
+    }
+    .form-inline .form-group {
+        display: flex;
+        align-items: center;
+        margin-right: 15px;
+    }
+    .form-inline .form-control,
+    .form-inline .form-select {
+        margin-left: 5px;
+        margin-right: 5px;
+    }
+    .mb-2 {
+        margin-bottom: 1rem;
+    }
+    .mr-3 {
+        margin-right: 1rem;
+    }
+    .btn-primary, .btn-success {
+        margin-right: 10px;
+    }
+
+</style>
+{% endblock pageContent %}
+
+{% block ScriptBlock %}
 <script>
     $(function() {
         $('.view-data').click(function() {
             uni_modal("Recibo de ventas", "{% url 'receipt-modal' %}?id=" + $(this).attr('data-id'))
-        })
+        });
         $('.delete-data').click(function() {
-            _conf("Quieres eliminar <b>" + $(this).attr('data-code') + "</b> transaccion?", "delete_sale", [$(this).attr('data-id')])
-        })
+            _conf("Quieres eliminar <b>" + $(this).attr('data-code') + "</b> transaccion?", "delete_sale", [$(this).attr('data-id')]);
+        });
         $('#cliente_id').select2({
             placeholder: "Selecciona un cliente aqui",
             width: '100%'
-        })
-
-    })
+        });
+    });
 
     function delete_sale($id) {
         start_loader();
@@ -135,12 +264,10 @@
             },
             url: "{% url 'delete-sale' %}",
             method: "POST",
-            data: {
-                id: $id
-            },
+            data: { id: $id },
             dataType: "json",
-            error: err => {
-                console.log(err)
+            error: function(err) {
+                console.log(err);
                 alert_toast("An error occured.", 'error');
                 end_loader();
             },
@@ -152,7 +279,23 @@
                     end_loader();
                 }
             }
-        })
+        });
     }
+
+    document.getElementById('captureBtn').addEventListener('click', function() {
+        var salesTable = document.getElementById('salesTable');
+        html2canvas(salesTable, {
+            onrendered: function(canvas) {
+                // Crear un elemento de imagen
+                var img = canvas.toDataURL("image/png");
+                var link = document.createElement('a');
+                link.href = img;
+                link.download = 'sales_table.png';
+                link.click();
+            }
+        });
+    });
+
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.4.1/html2canvas.min.js"></script>
 {% endblock ScriptBlock %}

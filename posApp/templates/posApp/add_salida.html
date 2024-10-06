@@ -1,0 +1,36 @@
+{% extends "posApp/base.html" %}
+
+{% block pageContent %}
+
+        <div class="mdc-layout-grid__cell stretch-card mdc-layout-grid__cell--span-12">
+            <div class="mdc-card py-2">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h4 class="card-title mb-0">Agregar Salida</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" class="form-container">
+                        {% csrf_token %}
+                        <div class="form-group">
+                            <label for="id_concepto">Concepto:</label>
+                            <input type="text" id="id_concepto" name="concepto" required class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="id_monto">Monto:</label>
+                            <input type="number" step="0.01" id="id_monto" name="monto" required class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="id_fecha">Fecha:</label>
+                            <input type="date" id="id_fecha" name="fecha" required class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="id_comentario">Comentario (opcional):</label>
+                            <textarea id="id_comentario" name="comentario" class="form-control"></textarea>
+                        </div>
+                        <div class="text-end">
+                            <button type="submit" class="btn btn-primary bg-gradient rounded-0">Guardar Salida</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends "posApp/base.html" %}
+
+{% block pageContent %}
+<div class="mdc-layout-grid__cell stretch-card mdc-layout-grid__cell--span-12">
+    <form method="POST">
+        {% csrf_token %}
+        <label for="username">Nombre de Usuario sin espacios:</label>
+        {{ form.username }}
+
+        <label for="password1">Contraseña:</label>
+        {{ form.password1 }}
+
+        <label for="password2">Confirmar Contraseña:</label>
+        {{ form.password2 }}
+
+        <label for="sucursal">Sucursal:</label>
+        {{ form.sucursal }}
+
+        <button class="mt-3" type="submit">Crear Usuario Vendedor</button>
+    </form>
+</div>
+
+<style>
+    form {
+        background-color: #fff;
+        padding: 20px;
+        margin: 50px auto;
+        width: 100%;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+    }
+
+    form label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: bold;
+    }
+
+    form input,
+    form select,
+    form button {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+    }
+
+    form button {
+        background-color: #007bff;
+        color: #fff;
+        border: none;
+        cursor: pointer;
+    }
+
+    form button:hover {
+        background-color: #0056b3;
+    }
+</style>
+
+{% endblock %}
