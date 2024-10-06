@@ -45,13 +45,9 @@ def login_user(request):
                     
                     # Check if the user is a manager using the user profile
                     if user_profile.is_manager:
-                        # Check if the user has a 'sucursal' selected; otherwise, redirect to select one
-                    
-                            # Redirect to the 'cambiar-sucursal' page for managers who haven't selected a branch
-                        resp['redirect_url'] = reverse('cambiar-sucursal')
+                        resp['redirect_url'] = reverse('cambiar-sucursal')  # Redirect to change branch for managers
                     else:
-                        # Redirect regular users to the home page
-                        resp['redirect_url'] = reverse('home-page')
+                        resp['redirect_url'] = reverse('home-page')  # Redirect to home page for regular users
                 except UserProfile.DoesNotExist:
                     # Handle case where user does not have a profile associated (fallback behavior)
                     resp['msg'] = "User profile not found. Please contact support."
