@@ -160,46 +160,40 @@
         $(function () {
             $('#login-user').submit(function (e) {
                 e.preventDefault();
-                var _this = $(this);
-                $('.err-msg').remove();
-                var el = $('<div>').addClass("alert alert-danger err-msg").hide();
-                if (_this[0].checkValidity() == false) {
-                    _this[0].reportValidity();
-                    return false;
+        
+                // Ensure the form is valid
+                if (!this.checkValidity()) {
+                    this.reportValidity();
+                    return;
                 }
-                start_loader();
+        
+                start_loader();  // Show loader
+        
+                // Set up AJAX request
                 $.ajax({
-                    headers: {
-                        "X-CSRFToken": '{{csrf_token}}'
-                    },
-                    url: "{% url 'login-user' %}",
-                    data: new FormData($(this)[0]),
-                    cache: false,
-                    contentType: false,
-                    processData: false,
-                    method: 'POST',
+                    url: $(this).attr('action'),  // Get URL from form action
                     type: 'POST',
+                    data: new FormData(this),  // Get form data
+                    processData: false,
+                    contentType: false,
                     dataType: 'json',
-                    error: err => {
-                        console.log(err);
-                        alert_toast("An error occured", 'error');
-                        end_loader();
+                    headers: {
+                        "X-CSRFToken": "{{ csrf_token }}"  // Include CSRF token from template context
                     },
                     success: function (resp) {
-                        if (typeof resp == 'object' && resp.status == 'success') {
-                            el.removeClass("alert alert-danger err-msg");
-                            location.href = resp.redirect_url;
-                        } else if (resp.status == 'failed' && !!resp.msg) {
-                            el.text(resp.msg);
+                        end_loader();  // Stop loader
+        
+                        // Handle response
+                        if (resp.status === 'success') {
+                            window.location.href = resp.redirect_url;  // Redirect on success
                         } else {
-                            el.text("An error occured", 'error');
-                            end_loader();
-                            console.err(resp);
+                            alert_toast(resp.msg || "An error occurred", 'danger');
                         }
-                        _this.prepend(el);
-                        el.show('slow');
-                        $("html, body, .modal").scrollTop(0);
-                        end_loader();
+                    },
+                    error: function (err) {
+                        end_loader();  // Stop loader
+                        alert_toast("An unexpected error occurred", 'danger');
+                        console.error(err);
                     }
                 });
             });
