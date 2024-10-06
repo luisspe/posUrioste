@@ -21,6 +21,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.db import transaction
 from datetime import datetime
 from calendar import monthrange
+from django.contrib.auth.views import LoginView
 
 # Login
 def login_user(request):
@@ -57,6 +58,13 @@ def login_user(request):
             resp['msg'] = "Incorrect username or password."
     
     return HttpResponse(json.dumps(resp), content_type='application/json')
+
+class CustomLoginView(LoginView):
+    template_name = 'posApp/login.html'
+    redirect_authenticated_user = True
+
+    def get_success_url(self):
+        return reverse_lazy('home-page')
 
 def logoutuser(request):
     logout(request)
