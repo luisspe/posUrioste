@@ -1163,12 +1163,9 @@ def salesList(request):
     salidas_query = Salida.objects.filter(sucursal=sucursal_a_usar)
 
     # Definir las fechas de inicio y fin, y convertirlas a objetos datetime
-    if user_profile.is_manager or user_profile.is_seller:
-        start_date = request.GET.get('start_date', today.strftime('%Y-%m-%d'))
-        end_date = request.GET.get('end_date', tomorrow.strftime('%Y-%m-%d'))
-    else:
-        start_date = today.strftime('%Y-%m-%d')
-        end_date = tomorrow.strftime('%Y-%m-%d')
+
+    start_date = request.GET.get('start_date', today.strftime('%Y-%m-%d'))
+    end_date = request.GET.get('end_date', tomorrow.strftime('%Y-%m-%d'))
 
     # Convertir las fechas al formato correcto para las consultas
     start_date = timezone.datetime.strptime(start_date, '%Y-%m-%d').date()
