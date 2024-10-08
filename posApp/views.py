@@ -1243,6 +1243,24 @@ def salesList(request):
 
     return render(request, 'posApp/sales.html', context)
 
+from django.views.decorators.http import require_GET
+@require_GET
+def buscar_clientes(request):
+    query = request.GET.get('query', '')
+
+    if query:
+        clientes = Clientes.objects.filter(nombre__icontains=query)[:10]  # Limitar a los primeros 10 resultados
+        clientes_data = [{
+            'id': cliente.id,
+            'nombre': cliente.nombre,
+            'apellido_materno': cliente.apellido_materno,
+            'apellido_paterno': cliente.apellido_paterno
+        } for cliente in clientes]
+
+        return JsonResponse({'clientes': clientes_data})
+    
+    return JsonResponse({'clientes': []})
+
 
 @login_required
 def cliente_mensualidades(request, cliente_id):
