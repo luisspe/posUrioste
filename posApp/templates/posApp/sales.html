@@ -113,7 +113,7 @@
                         <td class="px-2 py-1 text-start">{{ sale.date }}</td>
                         <td class="px-2 py-1 text-start">Venta</td>
                         <td class="px-2 py-1 text-start">{{ sale.client_name }}</td>
-                        <td class="px-2 py-1 text-start">{{ sale.done_by }}</td>
+                        <td class="px-2 py-1 text-start">{{ sale.realizo }}</td>
                         <td class="px-2 py-1 text-end">{{ sale.total }}</td>
                         <td class="px-2 py-1 text-center">{{ sale.payment_type }}</td>
                         <td class="px-2 py-1 text-center">{{ sale.horario }}</td>
@@ -149,17 +149,23 @@
                         <th class="text-right">{{ total_ventas }}</th>
                         <th></th>
                     </tr>
-                    {% if total_efectivo %}
+                    {% if totalEfectivo %}
                     <tr>
                         <th colspan="5" class="text-right">Total Efectivo:</th>
-                        <th class="text-right">{{ total_efectivo }}</th>
+                        <th class="text-right">
+                            <i class="material-icons">attach_money</i> <!-- Ícono de efectivo -->
+                            {{ totalEfectivo }}
+                        </th>
                         <th></th>
                     </tr>
                     {% endif %}
-                    {% if total_tarjeta %}
+                    {% if totalBanco %}
                     <tr>
-                        <th colspan="5" class="text-right">Total Tarjeta:</th>
-                        <th class="text-right">{{ total_tarjeta }}</th>
+                        <th colspan="5" class="text-right">Total Banco:</th>
+                        <th class="text-right">
+                            <i class="material-icons">credit_card</i> <!-- Ícono de tarjeta -->
+                            {{ totalBanco }}
+                        </th>
                         <th></th>
                     </tr>
                     {% endif %}

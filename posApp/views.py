@@ -1113,7 +1113,7 @@ def save_pos(request):
 
     return HttpResponse(json.dumps(resp), content_type="application/json")
 
-
+from decimal import Decimal, ROUND_HALF_UP
 from django.utils import timezone
 from datetime import timedelta
 import pytz
@@ -1123,22 +1123,15 @@ from django.db.models import Sum
 @login_required
 def salesList(request):
     try:
-        # Intentamos obtener el perfil del usuario
         user_profile = UserProfile.objects.get(user=request.user)
     except UserProfile.DoesNotExist:
         return render(request, 'posApp/error.html', {'message': 'Este usuario no tiene un perfil asociado.'})
 
     # Obtener la zona horaria de Ciudad de México
     tz = pytz.timezone('America/Mexico_City')
-
-    # Obtener la fecha y hora actual en la zona horaria de Ciudad de México
     now = timezone.now().astimezone(tz)
     today = now.date()
     tomorrow = today + timedelta(days=1)
-
-    # Definir las fechas de inicio y fin usando la zona horaria correcta
-    start_datetime = timezone.make_aware(timezone.datetime.combine(today, timezone.datetime.min.time()), tz)
-    end_datetime = timezone.make_aware(timezone.datetime.combine(tomorrow, timezone.datetime.max.time()), tz)
 
     # Asegurarte de que el perfil tenga una sucursal asignada
     if not user_profile.sucursal:
@@ -1154,41 +1147,34 @@ def salesList(request):
 
     # Filtrar todos los datos según la sucursal del usuario
     clientes = Clientes.objects.filter(sucursal=sucursal_a_usar)
-    formapago = FormaPago.objects.all()  # Asumiendo que FormaPago no es específico de sucursal
+    formapago = FormaPago.objects.all()
     productos = Products.objects.filter(sucursal=sucursal_a_usar)
     categorias = Category.objects.filter(sucursal=sucursal_a_usar)
     tipos_inscripcion = PlanInscripcion.objects.filter(sucursal=sucursal_a_usar)
 
+    # Obtener el parámetro de client_id
+    client_id = request.GET.get('cliente_id', '').strip()
+
+    # Base query para ventas y salidas
     sales_query = Sales.objects.filter(sucursal=sucursal_a_usar)
     salidas_query = Salida.objects.filter(sucursal=sucursal_a_usar)
 
-    # Definir las fechas de inicio y fin, y convertirlas a objetos datetime
+    # Si hay un client_id, filtramos solo por este cliente y no aplicamos las fechas
+    if client_id:
+        sales_query = sales_query.filter(client_id=client_id)
+    else:
+        # Si no hay client_id, aplicamos el filtro de fechas
+        start_date = request.GET.get('start_date', today.strftime('%Y-%m-%d'))
+        end_date = request.GET.get('end_date', tomorrow.strftime('%Y-%m-%d'))
+        start_date = timezone.datetime.strptime(start_date, '%Y-%m-%d').date()
+        end_date = timezone.datetime.strptime(end_date, '%Y-%m-%d').date()
 
-    start_date = request.GET.get('start_date', today.strftime('%Y-%m-%d'))
-    end_date = request.GET.get('end_date', tomorrow.strftime('%Y-%m-%d'))
-
-    # Convertir las fechas al formato correcto para las consultas
-    start_date = timezone.datetime.strptime(start_date, '%Y-%m-%d').date()
-    end_date = timezone.datetime.strptime(end_date, '%Y-%m-%d').date()
-
-    # Filtrar ventas y salidas por rango de fechas
-    sales_query = sales_query.filter(date_added__date__range=[start_date, end_date])
-    salidas_query = salidas_query.filter(fecha__range=[start_date, end_date])
-
-    # Cálculos de totales
-    totalEfectivo = Decimal(sales_query.filter(date_added__date=today, tipoPago=1).aggregate(Sum('grand_total'))['grand_total__sum'] or 0)
-    totalBanco = Decimal(sales_query.filter(date_added__date=today, tipoPago=2).aggregate(Sum('grand_total'))['grand_total__sum'] or 0)
-    totalSalidas = Decimal(salidas_query.aggregate(Sum('monto'))['monto__sum'] or 0)
-
-    tipo_pago_dict = {
-        1: "Efectivo",
-        2: "Banco",
-        3: "Efectivo y Tarjeta"
-    }
+        # Filtrar ventas por rango de fechas
+        sales_query = sales_query.filter(date_added__date__range=[start_date, end_date])
+        salidas_query = salidas_query.filter(fecha__range=[start_date, end_date])
 
     # Filtros adicionales basados en parámetros de consulta
     filters = {
-        'cliente_id': 'client_id',
         'formapago_id': 'tipoPago',
         'producto_id': 'id__in',
         'categoria_id': 'id__in',
@@ -1206,19 +1192,34 @@ def salesList(request):
             else:
                 sales_query = sales_query.filter(**{filter_key: value})
 
-    total_money = Decimal(sales_query.aggregate(Sum('grand_total'))['grand_total__sum'] or 0)
-    totalSalidas = Decimal(salidas_query.aggregate(Sum('monto'))['monto__sum'] or 0)
+    # Ordenar las ventas más recientes primero
+    sales_query = sales_query.order_by('-date_added')
 
+    # Cálculos de totales con redondeo a 2 decimales
+    total_money = Decimal(sales_query.aggregate(Sum('grand_total'))['grand_total__sum'] or 0).quantize(Decimal('0.00'), rounding=ROUND_HALF_UP)
+    totalSalidas = Decimal(salidas_query.aggregate(Sum('monto'))['monto__sum'] or 0).quantize(Decimal('0.00'), rounding=ROUND_HALF_UP)
+    totalEfectivo = Decimal(sales_query.filter(tipoPago=1).aggregate(Sum('grand_total'))['grand_total__sum'] or 0).quantize(Decimal('0.00'), rounding=ROUND_HALF_UP)
+    totalBanco = Decimal(sales_query.filter(tipoPago=2).aggregate(Sum('grand_total'))['grand_total__sum'] or 0).quantize(Decimal('0.00'), rounding=ROUND_HALF_UP)
+
+
+    tipo_pago_dict = {
+        1: "Efectivo",
+        2: "Banco",
+        3: "Efectivo y Tarjeta"
+    }
+
+    # Preparar la lista de ventas
     sales = []
     for sale in sales_query:
         client = Clientes.objects.get(id=sale.client_id) if sale.client_id else None
         sales.append({
             'id': sale.id,
-            'date': sale.date_added.astimezone(tz).strftime('%Y-%m-%d %H:%M'),  # Convertir la fecha a la zona horaria de Ciudad de México
-            'client_name': f"{client.nombre } {client.apellido_paterno} {client.apellido_materno}" if client else 'No Client',
+            'date': sale.date_added.astimezone(tz).strftime('%Y-%m-%d %H:%M'),
+            'client_name': f"{client.nombre} {client.apellido_paterno} {client.apellido_materno}" if client else 'No Client',
             'horario': client.horario if client else 'No Schedule',
             'plan_inscripcion': client.plan_inscripcion,
             'total': sale.grand_total,
+            'realizo': sale.usuario,
             'payment_type': tipo_pago_dict.get(sale.tipoPago_id, "Unknown") if sale.tipoPago else "Unknown"
         })
 
@@ -1237,8 +1238,8 @@ def salesList(request):
         'productos': productos,
         'categorias': categorias,
         'tipos_inscripcion': tipos_inscripcion,
-        'start_date': start_date.strftime('%Y-%m-%d'),
-        'end_date': end_date.strftime('%Y-%m-%d'),
+        'start_date': start_date.strftime('%Y-%m-%d') if not client_id else '',
+        'end_date': end_date.strftime('%Y-%m-%d') if not client_id else '',
     }
 
     return render(request, 'posApp/sales.html', context)
