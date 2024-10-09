@@ -34,7 +34,7 @@
                 <select id="cliente-select" name="cliente_id" class="form-control mx-sm-3">
                     <option value="">Todos los clientes</option>
                     {% for cliente in clientes %}
-                    <option value="{{ cliente.id }}" {% if cliente.id == request.GET.cliente_id %}selected{% endif %}>{{ cliente.nombre }} {{cliente.apellido_materno}} {{cliente.apellido_paterno}}</option>
+                    <option value="{{ cliente.id }}" {% if cliente.id == request.GET.cliente_id %}selected{% endif %}>{{ cliente.nombre }} {{cliente.apellido_paterno}} {{cliente.apellido_materno}} </option>
                     {% endfor %}
                 </select>
             </div>
