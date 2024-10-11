@@ -755,7 +755,8 @@ def save_client(request):
         resp['msg'] = "El cliente ya existe, prueba cambiando los datos."
     else:
         genero = Genero.objects.filter(id=data['genero_id']).first()
-        plan_inscripcion = PlanInscripcion.objects.filter(id=data['plan_inscripcion']).first()
+        plan_inscripcion_id = data.get('plan_inscripcion')
+        plan_inscripcion = PlanInscripcion.objects.filter(id=plan_inscripcion_id).first() if plan_inscripcion_id else None
         try:
             if id.isnumeric() and int(id) > 0:
                 # Actualizar cliente existente
