@@ -16,10 +16,6 @@ app.autodiscover_tasks()
 
 # Configuración de Celery Beat para tareas periódicas
 app.conf.beat_schedule = {
-    'check_mensualidades_cada_30_minutos': {
-        'task': 'posApp.tasks.status_mensualidades',
-        'schedule': timedelta(minutes=30),  # Cada 30 minutos
-    },
     'check_mensualidades_a_la_1am': {
         'task': 'posApp.tasks.status_mensualidades',
         'schedule': crontab(hour=1, minute=0),  # A la 1:00 AM
