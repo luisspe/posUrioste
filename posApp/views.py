@@ -873,12 +873,10 @@ def save_product(request):
         resp['msg'] = 'Error: el usuario no tiene un perfil asignado.'
         return HttpResponse(json.dumps(resp), content_type="application/json")
 
-    # Asegúrate de que el perfil tenga una sucursal asignada
     if not user_profile.sucursal:
         resp['msg'] = 'Error: el perfil no tiene una sucursal asignada.'
         return HttpResponse(json.dumps(resp), content_type="application/json")
 
-    # Determinar la sucursal a usar
     sucursal_a_usar = user_profile.sucursal
     if user_profile.is_manager and 'sucursal_id' in request.session:
         try:
@@ -889,44 +887,58 @@ def save_product(request):
 
     product_id = data.get('id', '')
     product_code = data.get('code', '')
-
-    # Verificar si existe un código de producto duplicado dentro de la misma sucursal
-    existing_products_query = Products.objects.filter(code=product_code, sucursal=sucursal_a_usar)
-    if product_id.isnumeric():
-        existing_products_query = existing_products_query.exclude(id=product_id)
-
-    if existing_products_query.exists():
-        resp['msg'] = "El código de producto ya existe en la base de datos."
-        return HttpResponse(json.dumps(resp), content_type="application/json")
-
     category_id = data.get('category_id')
+    entrada_inventario = int(data.get('entrada_inventario', 0))
+
+    # Validar categoría
     category = Category.objects.filter(id=category_id, sucursal=sucursal_a_usar).first()
     if not category:
         resp['msg'] = "Categoría no encontrada o no pertenece a tu sucursal."
         return HttpResponse(json.dumps(resp), content_type="application/json")
 
     try:
-        product_attributes = {
-            'code': product_code,
-            'category_id': category,
-            'name': data.get('name', ''),
-            'description': data.get('description', ''),
-            'price': float(data.get('price', '0')),
-            'status': int(data.get('status', '1')),
-            'sucursal': sucursal_a_usar
-        }
         if product_id.isnumeric() and int(product_id) > 0:
             # Actualizar producto existente
+            product = Products.objects.filter(id=product_id, sucursal=sucursal_a_usar).first()
+            if not product:
+                resp['msg'] = 'Producto no encontrado.'
+                return HttpResponse(json.dumps(resp), content_type="application/json")
+
+            product_attributes = {
+                'code': product_code,
+                'category_id': category,
+                'name': data.get('name', ''),
+                'description': data.get('description', ''),
+                'price': float(data.get('price', '0')),
+                'status': int(data.get('status', '1')),
+            }
+
+            # Actualizar atributos del producto
             Products.objects.filter(id=product_id, sucursal=sucursal_a_usar).update(**product_attributes)
+
+            # Actualizar inventario si hay entrada
+            if entrada_inventario > 0:
+                product.cantidad_disponible += entrada_inventario
+                product.save()
+
         else:
-            # Crear un nuevo producto
-            product = Products(**product_attributes)
+            # Crear nuevo producto
+            product = Products(
+                code=product_code,
+                category_id=category,
+                name=data.get('name', ''),
+                description=data.get('description', ''),
+                price=float(data.get('price', '0')),
+                status=int(data.get('status', '1')),
+                sucursal=sucursal_a_usar,
+                cantidad_disponible=int(data.get('cantidad_disponible', 0)) + entrada_inventario
+            )
             product.save()
+
         resp['status'] = 'success'
         messages.success(request, 'Producto guardado con éxito.')
     except Exception as e:
-        resp['status'] = 'failed'
-        resp['msg'] = str(e)
+        resp['msg'] = f"Ocurrió un error: {e}"
 
     return HttpResponse(json.dumps(resp), content_type="application/json")
 
@@ -1037,18 +1049,15 @@ def save_pos(request):
     data = request.POST
 
     try:
-        # Intentamos obtener el perfil del usuario
         user_profile = UserProfile.objects.get(user=request.user)
     except UserProfile.DoesNotExist:
         resp['msg'] = 'Error: el usuario no tiene un perfil asignado.'
         return HttpResponse(json.dumps(resp), content_type="application/json")
 
-    # Asegúrate de que el perfil tenga una sucursal asignada
     if not user_profile.sucursal:
         resp['msg'] = 'Error: el perfil no tiene una sucursal asignada.'
         return HttpResponse(json.dumps(resp), content_type="application/json")
 
-    # Determinar la sucursal a usar
     sucursal_a_usar = user_profile.sucursal
     if user_profile.is_manager and 'sucursal_id' in request.session:
         try:
@@ -1057,11 +1066,8 @@ def save_pos(request):
             resp['msg'] = 'Sucursal no válida en la sesión.'
             return HttpResponse(json.dumps(resp), content_type="application/json")
 
-    # Generar código único usando 'T', la fecha y la hora actual
     now = datetime.now()
     code = 'T' + now.strftime('%Y%m%d%H%M%S')
-
-    # Verificar que el cliente y el tipo de pago existan en la sucursal
     client = Clientes.objects.filter(id=data['client'], sucursal=sucursal_a_usar).first()
     tipoPago = FormaPago.objects.filter(id=data['tipoPago']).first()
 
@@ -1070,7 +1076,6 @@ def save_pos(request):
         return HttpResponse(json.dumps(resp), content_type="application/json")
 
     try:
-        # Guardar el objeto Sales con el nuevo código
         sales = Sales.objects.create(
             code=code,
             sub_total=data['sub_total'],
@@ -1082,20 +1087,35 @@ def save_pos(request):
             client=client,
             amount_change=data['amount_change'],
             tipoPago=tipoPago,
-            usuario=request.user,  # Usamos el usuario actual
+            usuario=request.user,
             comentario=data['comentario'],
-            sucursal=sucursal_a_usar  # Asegurarse de asignar la sucursal
+            sucursal=sucursal_a_usar
         )
         sale_id = sales.pk
 
-        # Crear items de venta
+        # Categorías que afectan inventario
+        categorias_afectan_inventario = ["Bebidas", "Comida", "Material"]
+
         for i, product_id in enumerate(data.getlist('product_id[]')):
             product = Products.objects.filter(id=product_id, sucursal=sucursal_a_usar).first()
             if not product:
-                continue  # Ignorar productos que no pertenecen a la sucursal del usuario
-            qty = data.getlist('qty[]')[i]
-            price = data.getlist('price[]')[i]
-            total = float(qty) * float(price)
+                continue
+
+            qty = int(data.getlist('qty[]')[i])
+            price = float(data.getlist('price[]')[i])
+            total = qty * price
+
+            # Verificar si la categoría afecta inventario
+            if product.category_id.name in categorias_afectan_inventario:
+                # Verificar cantidad disponible
+                if product.cantidad_disponible < qty:
+                    resp['msg'] = f"No hay suficiente inventario para el producto {product.name}."
+                    return HttpResponse(json.dumps(resp), content_type="application/json")
+
+                # Actualizar cantidad disponible
+                product.cantidad_disponible -= qty
+                product.save()
+
             salesItems.objects.create(
                 sale_id=sales,
                 client=client,

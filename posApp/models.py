@@ -161,12 +161,15 @@ class Products(models.Model):
     name = models.TextField()
     description = models.TextField()
     price = models.FloatField(default=0)
-    status = models.IntegerField(default=1) 
-    date_added = models.DateTimeField(default=timezone.now) 
-    date_updated = models.DateTimeField(auto_now=True) 
+    status = models.IntegerField(default=1)
+    date_added = models.DateTimeField(default=timezone.now)
+    date_updated = models.DateTimeField(auto_now=True)
     sucursal = models.ForeignKey(Sucursal, on_delete=models.SET_NULL, null=True, blank=True)
+    cantidad_disponible = models.IntegerField(default=0)  # Nueva columna para inventario
+
     def __str__(self):
         return self.code + " - " + self.name
+
     
 class FormaPago(models.Model):
     tipo = models.CharField(max_length=100)

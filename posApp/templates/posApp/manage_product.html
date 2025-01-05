@@ -34,6 +34,15 @@
                 <input type="text" name="price" id="price" class="form-control form-control-sm rounded-0" value="{% if product.price %}{{product.price}}{% endif %}" required>
             </div>
             <div class="form-group mb-3">
+                <label for="cantidad_disponible" class="control-label">Cantidad Disponible</label>
+                <input type="number" name="cantidad_disponible" id="cantidad_disponible" class="form-control form-control-sm rounded-0" value="{% if product.cantidad_disponible %}{{ product.cantidad_disponible }}{% else %}0{% endif %}" required>
+            </div>
+            <div class="form-group mb-3">
+                <label for="entrada_inventario" class="control-label">Entradas de Inventario</label>
+                <input type="number" name="entrada_inventario" id="entrada_inventario" class="form-control form-control-sm rounded-0" value="0">
+                <small class="form-text text-muted">Ingresa la cantidad a añadir al inventario actual.</small>
+            </div>
+            <div class="form-group mb-3">
                 <label for="status" class="control-label">Status</label>
                 <select name="status" id="status" class="form-select form-select-sm rounded-0" required>
             {% if product.status and product.status == 1 %}
