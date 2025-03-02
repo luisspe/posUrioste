@@ -42,4 +42,5 @@ urlpatterns = [
     path('create-sucursal/', views.create_sucursal, name='create_sucursal'),
     path('export_sales_to_excel/', views.export_sales_to_excel, name='export_sales_to_excel'),
     path('api/clientes/search/', views.buscar_clientes, name='buscar_clientes'),
+    path('reportes/mensual/', views.dashboard_report, name='monthly_report'),
 ]

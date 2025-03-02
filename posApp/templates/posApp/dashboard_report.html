@@ -1,0 +1,120 @@
+{% extends "posApp/base.html" %}
+
+{% block pageContent %}
+<div class="mdc-layout-grid__cell stretch-card mdc-layout-grid__cell--span-12">
+  <div class="mdc-card py-2">
+      <div class="d-flex justify-content-between align-items-center">
+          <h4 class="card-title mb-0">{{ page_title }}</h4>
+      </div>
+  </div>
+</div>
+
+<!-- Formulario para filtrar fechas (opcional) -->
+<div class="mdc-layout-grid__cell stretch-card mdc-layout-grid__cell--span-12">
+  <div class="mdc-card py-3">
+      <form method="get" class="row g-3">
+          <div class="col-auto">
+              <label for="start_date" class="form-label">Fecha inicio:</label>
+              <input type="date" id="start_date" name="start_date" class="form-control" value="{{ start_date }}">
+          </div>
+          <div class="col-auto">
+              <label for="end_date" class="form-label">Fecha fin:</label>
+              <input type="date" id="end_date" name="end_date" class="form-control" value="{{ end_date }}">
+          </div>
+          <div class="col-auto align-self-end">
+              <button type="submit" class="btn btn-primary">Filtrar</button>
+          </div>
+      </form>
+  </div>
+</div>
+
+<!-- Gráfico de Ventas Mensuales (histórico) -->
+<div class="mdc-layout-grid__cell stretch-card mdc-layout-grid__cell--span-12">
+  <div class="mdc-card">
+      <h5 class="card-title text-center py-2">Ventas Mensuales</h5>
+      <div class="table-responsive">
+          <div class="chart-container" style="position: relative; height:50vh; width:90vw; margin: auto;">
+              <canvas id="monthlySalesChart"></canvas>
+          </div>
+      </div>
+  </div>
+</div>
+
+<!-- Gráfico de Distribución de Ventas por Tipo de Pago -->
+<div class="mdc-layout-grid__cell stretch-card mdc-layout-grid__cell--span-12">
+  <div class="mdc-card">
+      <h5 class="card-title text-center py-2">Distribución de Ventas por Tipo de Pago</h5>
+      <div class="table-responsive">
+          <div class="chart-container" style="position: relative; height:50vh; width:90vw; margin: auto;">
+              <canvas id="paymentDistributionChart"></canvas>
+          </div>
+      </div>
+  </div>
+</div>
+{% endblock pageContent %}
+
+{% block ScriptBlock %}
+<!-- Incluir Chart.js desde CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    $(function() {
+        // --- Gráfico de Ventas Mensuales ---
+        const monthlyLabels = {{ monthly_labels|safe }};
+        const monthlyData = {{ monthly_data|safe }};
+        
+        const ctx1 = document.getElementById('monthlySalesChart').getContext('2d');
+        const monthlySalesChart = new Chart(ctx1, {
+            type: 'line', // o 'bar' según prefieras
+            data: {
+                labels: monthlyLabels,
+                datasets: [{
+                    label: 'Ventas Reales',
+                    data: monthlyData,
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 2,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+        
+        // --- Gráfico de Distribución de Ventas por Tipo de Pago ---
+        const paymentLabels = {{ payment_labels|safe }};
+        const paymentData = {{ payment_data|safe }};
+        
+        const ctx2 = document.getElementById('paymentDistributionChart').getContext('2d');
+        const paymentDistributionChart = new Chart(ctx2, {
+            type: 'pie',
+            data: {
+                labels: paymentLabels,
+                datasets: [{
+                    label: 'Ventas por Tipo de Pago',
+                    data: paymentData,
+                    backgroundColor: [
+                        'rgba(75, 192, 192, 0.2)',
+                        'rgba(255, 99, 132, 0.2)',
+                        'rgba(255, 206, 86, 0.2)'
+                    ],
+                    borderColor: [
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(255, 206, 86, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true
+            }
+        });
+    });
+</script>
+{% endblock ScriptBlock %}

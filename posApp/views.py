@@ -1265,6 +1265,92 @@ def salesList(request):
 
     return render(request, 'posApp/sales.html', context)
 
+from django.db.models.functions import TruncMonth
+# Importar librerías para la proyección
+import numpy as np
+# Librerías de statsmodels
+import statsmodels.api as sm
+from statsmodels.tsa.statespace.sarimax import SARIMAX
+from dateutil.relativedelta import relativedelta
+import pandas as pd
+
+import calendar
+@login_required
+def dashboard_report(request):
+    try:
+        user_profile = UserProfile.objects.get(user=request.user)
+    except UserProfile.DoesNotExist:
+        return render(request, 'posApp/error.html', {'message': 'Este usuario no tiene un perfil asociado.'})
+    
+    if not user_profile.sucursal:
+        return render(request, 'posApp/error.html', {'message': 'Este perfil no tiene una sucursal asignada.'})
+    
+    sucursal_a_usar = user_profile.sucursal
+    if user_profile.is_manager and 'sucursal_id' in request.session:
+        try:
+            sucursal_a_usar = Sucursal.objects.get(id=request.session['sucursal_id'])
+        except Sucursal.DoesNotExist:
+            return render(request, 'posApp/error.html', {'message': 'Sucursal no válida en la sesión.'})
+    
+    # Parámetros de fecha opcionales desde el frontend
+    start_date_str = request.GET.get('start_date')
+    end_date_str = request.GET.get('end_date')
+    
+    sales_queryset = Sales.objects.filter(sucursal=sucursal_a_usar)
+    if start_date_str and end_date_str:
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            sales_queryset = sales_queryset.filter(date_added__date__range=[start_date, end_date])
+        except ValueError:
+            pass  # Si las fechas son inválidas, se ignora el filtro
+
+    # Obtener ventas mensuales históricas
+    sales_by_month = (sales_queryset
+                      .annotate(month=TruncMonth('date_added'))
+                      .values('month')
+                      .annotate(total=Sum('grand_total'))
+                      .order_by('month'))
+
+    monthly_labels = []
+    monthly_data = []
+    months = []
+    for item in sales_by_month:
+        month_date = item['month']
+        months.append(month_date)
+        monthly_labels.append(month_date.strftime('%b %Y'))
+        monthly_data.append(float(item['total'] or 0))
+    
+    # (Opcional) Datos para distribución de ventas por tipo de pago
+    payment_data = (sales_queryset
+                    .values('tipoPago')
+                    .annotate(total=Sum('grand_total')))
+    
+    payment_labels = []
+    payment_values = []
+    tipo_pago_dict = {1: "Efectivo", 2: "Banco", 3: "Efectivo y Tarjeta"}
+    for item in payment_data:
+        payment_type = tipo_pago_dict.get(item['tipoPago'], "Otro")
+        payment_labels.append(payment_type)
+        payment_values.append(float(item['total'] or 0))
+    
+    context = {
+        'page_title': 'Dashboard de Ventas',
+        # Datos históricos
+        'monthly_labels': monthly_labels,
+        'monthly_data': monthly_data,
+        # (Ya no se incluyen proyecciones)
+        'forecast_labels': [],
+        'forecast_data': [],
+        # Distribución de pagos
+        'payment_labels': payment_labels,
+        'payment_data': payment_values,
+        # Fechas de filtro
+        'start_date': start_date_str if start_date_str else '',
+        'end_date': end_date_str if end_date_str else '',
+    }
+    return render(request, 'posApp/dashboard_report.html', context)
+
 from django.views.decorators.http import require_GET
 @require_GET
 def buscar_clientes(request):
