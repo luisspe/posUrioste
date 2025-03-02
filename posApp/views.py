@@ -1268,9 +1268,7 @@ def salesList(request):
 from django.db.models.functions import TruncMonth
 # Importar librerías para la proyección
 import numpy as np
-# Librerías de statsmodels
-import statsmodels.api as sm
-from statsmodels.tsa.statespace.sarimax import SARIMAX
+
 from dateutil.relativedelta import relativedelta
 import pandas as pd
 
