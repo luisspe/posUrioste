@@ -22,6 +22,7 @@ from django.db import transaction
 from datetime import datetime
 from calendar import monthrange
 from django.contrib.auth.views import LoginView
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 # Login
 def login_user(request):
@@ -576,9 +577,9 @@ def clients(request):
             return render(request, 'posApp/error.html', {'message': 'Sucursal no válida en la sesión.'})
 
     # Filtrar clientes por la sucursal del perfil del usuario
-    all_clients = Clientes.objects.filter(sucursal=sucursal_a_usar)
+    all_clients = Clientes.objects.filter(sucursal=sucursal_a_usar).order_by('nombre')
 
-    # Aplicar filtros adicionales si son proporcionados
+    # Aplicar filtros adicionales
     estado_filtro = request.GET.get('estado_mensualidad')
     horario_filtro = request.GET.get('horario')
     plan_inscripcion_filtro = request.GET.get('plan_inscripcion')
@@ -591,14 +592,28 @@ def clients(request):
     if plan_inscripcion_filtro:
         all_clients = all_clients.filter(plan_inscripcion__id=plan_inscripcion_filtro)
 
+    # Búsqueda optimizada con Q objects
     if query:
-        query = query.lower()
-        search_terms = query.split()  # Dividir la consulta en palabras
-        all_clients = [
-            client for client in all_clients 
-            if any(term in client.nombre.lower() or term in client.apellido_paterno.lower() or term in client.apellido_materno.lower() 
-                for term in search_terms)
-        ]
+        search_terms = query.split()
+        q_objects = Q()
+        for term in search_terms:
+            q_objects |= (
+                Q(nombre__icontains=term) |
+                Q(apellido_paterno__icontains=term) |
+                Q(apellido_materno__icontains=term)
+            )
+        all_clients = all_clients.filter(q_objects)
+
+    # Paginación (25 elementos por página)
+    page = request.GET.get('page', 1)
+    paginator = Paginator(all_clients, 25)
+    
+    try:
+        clients_page = paginator.page(page)
+    except PageNotAnInteger:
+        clients_page = paginator.page(1)
+    except EmptyPage:
+        clients_page = paginator.page(paginator.num_pages)
 
     horarios = [ 
         "AGUAS ABIERTAS", "EQUIPO A", "EQUIPO B", "PRESELECTIVOS", 
@@ -617,7 +632,7 @@ def clients(request):
 
     context = {
         'page_title': 'Clientes',
-        'clients': all_clients,
+        'clients': clients_page,  # Cambiar a la página paginada
         'query': query,
         'estado_filtro': estado_filtro,
         'horario_filtro': horario_filtro,

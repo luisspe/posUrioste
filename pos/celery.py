@@ -14,13 +14,13 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 # Autodiscover de las tareas registradas en las apps de Django
 app.autodiscover_tasks()
 
-# Configuración de Celery Beat para tareas periódicas
-app.conf.beat_schedule = {
-    'check_mensualidades_a_la_1am': {
-        'task': 'posApp.tasks.status_mensualidades',
-        'schedule': crontab(hour=1, minute=0),  # A la 1:00 AM
-    },
-}
+# Configuración de Celery Beat para tareas periódicas (comentado)
+# app.conf.beat_schedule = {
+#     'check_mensualidades_a_la_1am': {
+#         'task': 'posApp.tasks.status_mensualidades',
+#         'schedule': crontab(hour=1, minute=0),  # A la 1:00 AM
+#     },
+# }
 
 # Debugging task para verificar que Celery está funcionando (opcional)
 @app.task(bind=True)
