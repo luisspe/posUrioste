@@ -148,19 +148,18 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 
-CELERY_BROKER_URL = 'redis://default:GuGJPHPgtZHFTVTBhvpVZsjACGMbOROS@autorack.proxy.rlwy.net:52286/0' 
-CELERY_RESULT_BACKEND = CELERY_BROKER_URL
+#CELERY_BROKER_URL = 'redis://default:GuGJPHPgtZHFTVTBhvpVZsjACGMbOROS@autorack.proxy.rlwy.net:52286/0' 
+#CELERY_RESULT_BACKEND = CELERY_BROKER_URL
 
-
-CELERY_TASK_TRACK_STARTED = True
-CELERY_TASK_TIME_LIMIT = 30 * 60
-CELERY_BROKER_TRANSPORT_OPTIONS = {
-    'visibility_timeout': 7500,  # Ajusta este valor a más de 60 minutos (en segundos)
-}
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
-CELERY_TIMEZONE = 'America/Mexico_City'  # O la zona horaria que necesites
+# CELERY_TASK_TRACK_STARTED = True
+# CELERY_TASK_TIME_LIMIT = 30 * 60
+# CELERY_BROKER_TRANSPORT_OPTIONS = {
+#     'visibility_timeout': 7500,  # Ajusta este valor a más de 60 minutos (en segundos)
+# }
+# CELERY_ACCEPT_CONTENT = ['json']
+# CELERY_TASK_SERIALIZER = 'json'
+# CELERY_RESULT_SERIALIZER = 'json'
+# CELERY_TIMEZONE = 'America/Mexico_City'  # O la zona horaria que necesites
 
 
 # Default primary key field type
