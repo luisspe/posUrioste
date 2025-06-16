@@ -1169,11 +1169,9 @@ def salesList(request):
     today = now.date()
     tomorrow = today + timedelta(days=1)
 
-    # Asegurarte de que el perfil tenga una sucursal asignada
     if not user_profile.sucursal:
         return render(request, 'posApp/error.html', {'message': 'Este perfil no tiene una sucursal asignada.'})
 
-    # Determinar la sucursal a usar
     sucursal_a_usar = user_profile.sucursal
     if user_profile.is_manager and 'sucursal_id' in request.session:
         try:
@@ -1181,37 +1179,42 @@ def salesList(request):
         except Sucursal.DoesNotExist:
             return render(request, 'posApp/error.html', {'message': 'Sucursal no válida en la sesión.'})
 
-    # Filtrar todos los datos según la sucursal del usuario
+    # Filtrar todos los datos para los dropdowns del template
     clientes = Clientes.objects.filter(sucursal=sucursal_a_usar)
     formapago = FormaPago.objects.all()
     productos = Products.objects.filter(sucursal=sucursal_a_usar)
     categorias = Category.objects.filter(sucursal=sucursal_a_usar)
     tipos_inscripcion = PlanInscripcion.objects.filter(sucursal=sucursal_a_usar)
 
-    # Obtener el parámetro de client_id
     client_id = request.GET.get('cliente_id', '').strip()
-
-    # Base query para ventas y salidas
-    sales_query = Sales.objects.filter(sucursal=sucursal_a_usar)
+    
+    # --- OPTIMIZACIÓN CLAVE ---
+    # Usamos select_related('client') para traer los datos del cliente en la misma consulta
+    # y así evitar el problema N+1 que causaba el timeout.
+    # NOTA: 'client' debe ser el nombre del campo ForeignKey en tu modelo Sales.
+    sales_query = Sales.objects.select_related('client').filter(sucursal=sucursal_a_usar)
     salidas_query = Salida.objects.filter(sucursal=sucursal_a_usar)
 
-    # Si hay un client_id, filtramos solo por este cliente y no aplicamos las fechas
+    start_date_str = today.strftime('%Y-%m-%d')
+    end_date_str = tomorrow.strftime('%Y-%m-%d')
+
+    # Lógica de filtros por cliente o por fecha
     if client_id:
         sales_query = sales_query.filter(client_id=client_id)
+        start_date_str = ''
+        end_date_str = ''
     else:
-        # Si no hay client_id, aplicamos el filtro de fechas
-        start_date = request.GET.get('start_date', today.strftime('%Y-%m-%d'))
-        end_date = request.GET.get('end_date', tomorrow.strftime('%Y-%m-%d'))
-        start_date = timezone.datetime.strptime(start_date, '%Y-%m-%d').date()
-        end_date = timezone.datetime.strptime(end_date, '%Y-%m-%d').date()
+        start_date_str = request.GET.get('start_date', start_date_str)
+        end_date_str = request.GET.get('end_date', end_date_str)
+        start_date = timezone.datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        end_date = timezone.datetime.strptime(end_date_str, '%Y-%m-%d').date()
 
-        # Filtrar ventas por rango de fechas
         sales_query = sales_query.filter(date_added__date__range=[start_date, end_date])
         salidas_query = salidas_query.filter(fecha__range=[start_date, end_date])
 
-    # Filtros adicionales basados en parámetros de consulta
+    # --- LÓGICA DE FILTROS ADICIONALES (RESTAURADA) ---
     filters = {
-        'formapago_id': 'tipoPago',
+        'formapago_id': 'tipoPago_id', # Asegúrate que el filtro sea sobre el campo correcto (ej. tipoPago_id)
         'producto_id': 'id__in',
         'categoria_id': 'id__in',
         'tipo_inscripcion_id': 'id__in'
@@ -1220,46 +1223,56 @@ def salesList(request):
         value = request.GET.get(param)
         if value:
             if param == 'producto_id':
-                sales_query = sales_query.filter(**{filter_key: salesItems.objects.filter(product_id=value, product_id__sucursal=sucursal_a_usar).values_list('sale_id', flat=True)})
+                # Subconsulta para obtener las ventas que contienen un producto específico
+                sale_ids = salesItems.objects.filter(product_id=value, product__sucursal=sucursal_a_usar).values_list('sale_id', flat=True)
+                sales_query = sales_query.filter(id__in=sale_ids)
             elif param == 'categoria_id':
-                sales_query = sales_query.filter(**{filter_key: salesItems.objects.filter(product_id__category_id=value, product_id__sucursal=sucursal_a_usar).values_list('sale_id', flat=True)})
+                # Subconsulta para obtener las ventas que contienen productos de una categoría específica
+                sale_ids = salesItems.objects.filter(product__category_id=value, product__sucursal=sucursal_a_usar).values_list('sale_id', flat=True)
+                sales_query = sales_query.filter(id__in=sale_ids)
             elif param == 'tipo_inscripcion_id':
-                sales_query = sales_query.filter(**{filter_key: salesItems.objects.filter(product_name__icontains=PlanInscripcion.objects.get(id=value, sucursal=sucursal_a_usar).nombre).values_list('sale_id', flat=True)})
+                # Subconsulta para ventas que contienen un plan de inscripción específico
+                plan = PlanInscripcion.objects.get(id=value, sucursal=sucursal_a_usar)
+                sale_ids = salesItems.objects.filter(product_name__icontains=plan.nombre).values_list('sale_id', flat=True)
+                sales_query = sales_query.filter(id__in=sale_ids)
             else:
+                # Filtro directo (ej. por forma de pago)
                 sales_query = sales_query.filter(**{filter_key: value})
 
-    # Ordenar las ventas más recientes primero
+    # Ordenar y realizar cálculos
     sales_query = sales_query.order_by('-date_added')
 
-    # Cálculos de totales con redondeo a 2 decimales
     total_money = Decimal(sales_query.aggregate(Sum('grand_total'))['grand_total__sum'] or 0).quantize(Decimal('0.00'), rounding=ROUND_HALF_UP)
     totalSalidas = Decimal(salidas_query.aggregate(Sum('monto'))['monto__sum'] or 0).quantize(Decimal('0.00'), rounding=ROUND_HALF_UP)
-    totalEfectivo = Decimal(sales_query.filter(tipoPago=1).aggregate(Sum('grand_total'))['grand_total__sum'] or 0).quantize(Decimal('0.00'), rounding=ROUND_HALF_UP)
-    totalBanco = Decimal(sales_query.filter(tipoPago=2).aggregate(Sum('grand_total'))['grand_total__sum'] or 0).quantize(Decimal('0.00'), rounding=ROUND_HALF_UP)
+    totalEfectivo = Decimal(sales_query.filter(tipoPago_id=1).aggregate(Sum('grand_total'))['grand_total__sum'] or 0).quantize(Decimal('0.00'), rounding=ROUND_HALF_UP)
+    totalBanco = Decimal(sales_query.filter(tipoPago_id=2).aggregate(Sum('grand_total'))['grand_total__sum'] or 0).quantize(Decimal('0.00'), rounding=ROUND_HALF_UP)
 
+    tipo_pago_dict = {1: "Efectivo", 2: "Banco", 3: "Efectivo y Tarjeta"}
 
-    tipo_pago_dict = {
-        1: "Efectivo",
-        2: "Banco",
-        3: "Efectivo y Tarjeta"
-    }
-
-    # Preparar la lista de ventas
+    # --- BUCLE OPTIMIZADO ---
+    # Gracias a select_related, este bucle ya no hace consultas a la base de datos.
     sales = []
     for sale in sales_query:
-        client = Clientes.objects.get(id=sale.client_id) if sale.client_id else None
+        client_name = 'No Client'
+        horario = 'No Schedule'
+        plan_inscripcion = None
+
+        if sale.client:
+            client_name = f"{sale.client.nombre} {sale.client.apellido_paterno} {sale.client.apellido_materno}"
+            horario = sale.client.horario
+            plan_inscripcion = sale.client.plan_inscripcion
+
         sales.append({
             'id': sale.id,
             'date': sale.date_added.astimezone(tz).strftime('%Y-%m-%d %H:%M'),
-            'client_name': f"{client.nombre} {client.apellido_paterno} {client.apellido_materno}" if client else 'No Client',
-            'horario': client.horario if client else 'No Schedule',
-            'plan_inscripcion': client.plan_inscripcion,
+            'client_name': client_name,
+            'horario': horario,
+            'plan_inscripcion': plan_inscripcion,
             'total': sale.grand_total,
             'realizo': sale.usuario,
-            'payment_type': tipo_pago_dict.get(sale.tipoPago_id, "Unknown") if sale.tipoPago else "Unknown"
+            'payment_type': tipo_pago_dict.get(sale.tipoPago_id, "Unknown")
         })
 
-    # Preparar el contexto para el template
     context = {
         'page_title': 'Sales Transactions',
         'sales_data': sales,
@@ -1274,8 +1287,8 @@ def salesList(request):
         'productos': productos,
         'categorias': categorias,
         'tipos_inscripcion': tipos_inscripcion,
-        'start_date': start_date.strftime('%Y-%m-%d') if not client_id else '',
-        'end_date': end_date.strftime('%Y-%m-%d') if not client_id else '',
+        'start_date': start_date_str,
+        'end_date': end_date_str,
     }
 
     return render(request, 'posApp/sales.html', context)
