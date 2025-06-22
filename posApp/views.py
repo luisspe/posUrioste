@@ -1246,8 +1246,9 @@ def salesList(request):
     totalSalidas = Decimal(salidas_query.aggregate(Sum('monto'))['monto__sum'] or 0).quantize(Decimal('0.00'), rounding=ROUND_HALF_UP)
     totalEfectivo = Decimal(sales_query.filter(tipoPago_id=1).aggregate(Sum('grand_total'))['grand_total__sum'] or 0).quantize(Decimal('0.00'), rounding=ROUND_HALF_UP)
     totalBanco = Decimal(sales_query.filter(tipoPago_id=2).aggregate(Sum('grand_total'))['grand_total__sum'] or 0).quantize(Decimal('0.00'), rounding=ROUND_HALF_UP)
+    totalTarjeta = Decimal(sales_query.filter(tipoPago_id=4).aggregate(Sum('grand_total'))['grand_total__sum'] or 0).quantize(Decimal('0.00'), rounding=ROUND_HALF_UP)
 
-    tipo_pago_dict = {1: "Efectivo", 2: "Banco", 3: "Efectivo y Tarjeta"}
+    tipo_pago_dict = {1: "Efectivo", 2: "Banco", 3: "Efectivo y Tarjeta", 4:"Tarjeta"}
 
     # --- BUCLE OPTIMIZADO ---
     # Gracias a select_related, este bucle ya no hace consultas a la base de datos.
@@ -1282,6 +1283,7 @@ def salesList(request):
         'neto': total_money - totalSalidas,
         'totalEfectivo': totalEfectivo,
         'totalBanco': totalBanco,
+        'totalTarjeta': totalTarjeta,
         'clientes': clientes,
         'formapago': formapago,
         'productos': productos,

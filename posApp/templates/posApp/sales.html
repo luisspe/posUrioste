@@ -159,6 +159,16 @@
                         <th></th>
                     </tr>
                     {% endif %}
+                    {% if totalTarjeta %}
+                    <tr>
+                        <th colspan="5" class="text-right">Total Tarjeta:</th>
+                        <th class="text-right">
+                            <i class="material-icons">credit_card</i> <!-- Ícono de tarjeta -->
+                            {{ totalTarjeta }}
+                        </th>
+                        <th></th>
+                    </tr>
+                    {% endif %}
                     {% if totalBanco %}
                     <tr>
                         <th colspan="5" class="text-right">Total Banco:</th>
