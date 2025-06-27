@@ -187,21 +187,21 @@ class Sales(models.Model):
     tendered_amount = models.FloatField(default=0)
     tendered_amount_card = models.FloatField(default=0)
     amount_change = models.FloatField(default=0)
-    date_added = models.DateTimeField(default=timezone.now, db_index=True) 
+    date_added = models.DateTimeField(default=timezone.now, db_index=True)
     date_updated = models.DateTimeField(auto_now=True)
-    # CAMBIO 4: Ajustar on_delete y añadir índice. ¡MUY IMPORTANTE!
-    client = models.ForeignKey(
-        Clientes, 
-        on_delete=models.PROTECT, # Previene el borrado accidental de un cliente con ventas
-        db_index=True             # ¡El índice que soluciona tu problema de velocidad!
-    )
+    client = models.ForeignKey(Clientes, on_delete=models.PROTECT, db_index=True)
     usuario = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     tipoPago = models.ForeignKey(FormaPago, on_delete=models.PROTECT, db_index=True)
     comentario = models.CharField(max_length=700, null=True)
     sucursal = models.ForeignKey(Sucursal, on_delete=models.SET_NULL, null=True, blank=True, db_index=True)
+
     def __str__(self):
         return self.code
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['sucursal', 'date_added'], name='sales_sucursal_date_idx'),
+        ]
 class salesItems(models.Model):
     sale_id = models.ForeignKey(Sales,on_delete=models.CASCADE)
     product_id = models.ForeignKey(Products,on_delete=models.CASCADE, blank=True, null=True)
