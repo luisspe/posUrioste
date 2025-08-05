@@ -4,9 +4,16 @@
     <div class="mdc-drawer__header border-bottom border-light">
         <a href="{% url 'home-page' %}" class="brand-logo">
             
-            <img style="display: block; margin: 0 auto; max-width: 150px; height: auto;" src="https://static.wixstatic.com/media/7dbb81_b3104a39f3ed47ae8c62b057b5437929~mv2.png/v1/fill/w_411,h_411,al_c,q_85,usm_0.66_1.00_0.01,enc_auto/313400177_487585436739361_7975272688749260606_n.png" alt="">
+            {% if user_profile.sucursal|lower == "acuática modelo" %}
+                <img style="display: block; margin: 0 auto; max-width: 200px; height: auto;" src="https://i.ibb.co/b5J08rVD/e29776b3-29f4-4325-878c-916fed80c2c2.jpg" alt="e29776b3-29f4-4325-878c-916fed80c2c2" border="0">
+            
+            {% else %}
+                <img style="display: block; margin: 0 auto; max-width: 150px; height: auto;" src="https://static.wixstatic.com/media/7dbb81_b3104a39f3ed47ae8c62b057b5437929~mv2.png/v1/fill/w_411,h_411,al_c,q_85,usm_0.66_1.00_0.01,enc_auto/313400177_487585436739361_7975272688749260606_n.png" alt="">
+            {% endif %}
         </a>
     </div>
+    
+    {{user_profile.sucursal}}
     <div class="mdc-drawer__content">
         <div class="mdc-list-group">
             <nav class="mdc-list mdc-drawer-menu">
@@ -26,16 +33,18 @@
                     </a>
                 </div>
                 {% if user_profile and user_profile.is_manager %}
-                    <div class="mdc-list-item mdc-drawer-item">
-                        <a class="mdc-drawer-link" href="{% url 'cambiar-sucursal' %}">
-                            <i class="material-icons mdc-list-item__start-detail mdc-drawer-item-icon" aria-hidden="true">label</i> Cambiar Sucursal
-                        </a>
-                    </div>
-                    <div class="mdc-list-item mdc-drawer-item">
-                        <a class="mdc-drawer-link" href="{% url 'create_sucursal' %}">
-                            <i class="material-icons mdc-list-item__start-detail mdc-drawer-item-icon" aria-hidden="true">business</i> Crear Sucursal
-                        </a>
-                    </div>
+                    {% if not user_profile.is_modelo_manager %}
+                        <div class="mdc-list-item mdc-drawer-item">
+                            <a class="mdc-drawer-link" href="{% url 'cambiar-sucursal' %}">
+                                <i class="material-icons mdc-list-item__start-detail mdc-drawer-item-icon" aria-hidden="true">label</i> Cambiar Sucursal
+                            </a>
+                        </div>
+                        <div class="mdc-list-item mdc-drawer-item">
+                            <a class="mdc-drawer-link" href="{% url 'create_sucursal' %}">
+                                <i class="material-icons mdc-list-item__start-detail mdc-drawer-item-icon" aria-hidden="true">business</i> Crear Sucursal
+                            </a>
+                        </div>
+                    {% endif %}
                     <div class="mdc-list-item mdc-drawer-item">
                         <a class="mdc-drawer-link" href="{% url 'monthly_report' %}">
                             <i class="material-icons mdc-list-item__start-detail mdc-drawer-item-icon" aria-hidden="true">label</i> Ver Graficos de ventas

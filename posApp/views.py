@@ -44,10 +44,10 @@ def login_user(request):
                 try:
                     # Retrieve the user's profile
                     user_profile = UserProfile.objects.get(user=user)
-                    
-                    # Check if the user is a manager using the user profile
-                    if user_profile.is_manager:
-                        resp['redirect_url'] = reverse('cambiar-sucursal')  # Redirect to change branch for managers
+
+                    if user_profile.is_modelo_manager:
+                        resp['redirect_url'] = reverse('home-page')
+
                     else:
                         resp['redirect_url'] = reverse('home-page')  # Redirect to home page for regular users
                 except UserProfile.DoesNotExist:
@@ -133,7 +133,9 @@ class SellerUserCreateView(CreateView):
 @login_required
 def home(request):
     user = request.user
-
+    facebook_image_url = "https://www.facebook.com/photo/?fbid=122093346062875345&set=a.122093345048875345"
+    encoded_url = base64.urlsafe_b64encode(facebook_image_url.encode()).decode()
+    
     # Verifica si el usuario tiene un perfil asociado
     try:
         user_profile = UserProfile.objects.get(user=user)
@@ -149,7 +151,14 @@ def home(request):
         # Obtiene la sucursal desde la sesión
         sucursal_id = request.session.get('sucursal_id')
         if not sucursal_id:
-            return render(request, 'posApp/error.html', {'message': 'No se ha seleccionado una sucursal.'})
+            # Asignar automáticamente la sucursal "Acuática Modelo" si no hay sucursal en la sesión
+            sucursal_modelo = Sucursal.objects.filter(nombre="Acuática Modelo").first()
+            if sucursal_modelo:
+                request.session['sucursal_id'] = sucursal_modelo.id
+                request.session['sucursal_nombre'] = sucursal_modelo.nombre
+                sucursal_id = sucursal_modelo.id
+            else:
+                return render(request, 'posApp/error.html', {'message': 'No se ha seleccionado una sucursal y no existe "Acuática Modelo".'})
 
         try:
             sucursal_a_usar = Sucursal.objects.get(id=sucursal_id)
@@ -207,6 +216,8 @@ def home(request):
         'month_sales_bank': month_sales_bank_total,
         'user_info': user_info,
         'sucursal': sucursal_a_usar,
+        'user_profile': user_profile,
+        'facebook_image_url': facebook_image_url,
     }
 
     return render(request, 'posApp/home.html', context)
@@ -559,16 +570,13 @@ def delete_plan(request):
 @login_required
 def clients(request):
     try:
-        # Intentamos obtener el perfil del usuario
         user_profile = UserProfile.objects.get(user=request.user)
     except UserProfile.DoesNotExist:
         return render(request, 'posApp/error.html', {'message': 'Este usuario no tiene un perfil asociado.'})
 
-    # Asegúrate de que el perfil tenga una sucursal asignada
     if not user_profile.sucursal:
         return render(request, 'posApp/error.html', {'message': 'Este perfil no tiene una sucursal asignada.'})
 
-    # Determinar la sucursal a usar
     sucursal_a_usar = user_profile.sucursal
     if user_profile.is_manager and 'sucursal_id' in request.session:
         try:
@@ -576,7 +584,6 @@ def clients(request):
         except Sucursal.DoesNotExist:
             return render(request, 'posApp/error.html', {'message': 'Sucursal no válida en la sesión.'})
 
-    # Filtrar clientes por la sucursal del perfil del usuario
     all_clients = Clientes.objects.filter(sucursal=sucursal_a_usar).order_by('nombre')
 
     # Aplicar filtros adicionales
@@ -591,8 +598,6 @@ def clients(request):
         all_clients = all_clients.filter(horario__icontains=horario_filtro)
     if plan_inscripcion_filtro:
         all_clients = all_clients.filter(plan_inscripcion__id=plan_inscripcion_filtro)
-
-    # Búsqueda optimizada con Q objects
     if query:
         search_terms = query.split()
         q_objects = Q()
@@ -604,35 +609,28 @@ def clients(request):
             )
         all_clients = all_clients.filter(q_objects)
 
-    # Paginación (25 elementos por página)
-    page = request.GET.get('page', 1)
-    paginator = Paginator(all_clients, 25)
-    
-    try:
-        clients_page = paginator.page(page)
-    except PageNotAnInteger:
-        clients_page = paginator.page(1)
-    except EmptyPage:
-        clients_page = paginator.page(paginator.num_pages)
+    # --- LÓGICA DE PAGINACIÓN (YA LA TENÍAS, LA MEJORAMOS UN POCO) ---
+    paginator = Paginator(all_clients, 25)  # 25 clientes por página
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number) # .get_page maneja errores de forma más simple
 
+    # --- CÓDIGO CLAVE PARA MANTENER FILTROS ---
+    query_params = request.GET.copy()
+    if 'page' in query_params:
+        del query_params['page']
+    query_params = query_params.urlencode()
+
+    # --- Preparación del contexto para la plantilla ---
     horarios = [ 
-        "AGUAS ABIERTAS", "EQUIPO A", "EQUIPO B", "PRESELECTIVOS", 
-        "7:00 PRINCIPIANTES", "8:00 PRINCIPIANTES", "9:00 PRINCIPIANTES", 
-        "7:00 INTERMEDIOS", "8:00 INTERMEDIOS", "9:00 INTERMEDIOS", 
-        "7:00 AVANZADOS", "8:00 AVANZADOS", "9:00 AVANZADOS", 
-        "7:00", "08:00", "09:00", "10:00", "11:00", "12:00", 
-        "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", 
-        "19:00", "20:00", "21:00", 
-        "19:00 PRINCIPIANTES", "20:00 PRINCIPIANTES", "21:00 PRINCIPIANTES", 
-        "19:00 INTERMEDIOS", "20:00 INTERMEDIOS", "21:00 INTERMEDIOS", 
-        "19:00 AVANZADOS", "20:00 AVANZADOS", "21:00 AVANZADOS" 
+        "AGUAS ABIERTAS", "EQUIPO A", "EQUIPO B", "PRESELECTIVOS", "7:00 PRINCIPIANTES", 
+        # ... resto de tus horarios ...
     ]
-
     planes_inscripcion = PlanInscripcion.objects.filter(sucursal=sucursal_a_usar)
 
     context = {
         'page_title': 'Clientes',
-        'clients': clients_page,  # Cambiar a la página paginada
+        'clients': page_obj,  # <-- CAMBIO: Pasamos el objeto de página completo
+        'query_params': query_params, # <-- NUEVO: Para los links de paginación
         'query': query,
         'estado_filtro': estado_filtro,
         'horario_filtro': horario_filtro,
@@ -1163,7 +1161,6 @@ def salesList(request):
     except UserProfile.DoesNotExist:
         return render(request, 'posApp/error.html', {'message': 'Este usuario no tiene un perfil asociado.'})
 
-    # Obtener la zona horaria de Ciudad de México
     tz = pytz.timezone('America/Mexico_City')
     now = timezone.now().astimezone(tz)
     today = now.date()
@@ -1179,7 +1176,6 @@ def salesList(request):
         except Sucursal.DoesNotExist:
             return render(request, 'posApp/error.html', {'message': 'Sucursal no válida en la sesión.'})
 
-    # Filtrar todos los datos para los dropdowns del template
     clientes = Clientes.objects.filter(sucursal=sucursal_a_usar)
     formapago = FormaPago.objects.all()
     productos = Products.objects.filter(sucursal=sucursal_a_usar)
@@ -1187,18 +1183,12 @@ def salesList(request):
     tipos_inscripcion = PlanInscripcion.objects.filter(sucursal=sucursal_a_usar)
 
     client_id = request.GET.get('cliente_id', '').strip()
-    
-    # --- OPTIMIZACIÓN CLAVE ---
-    # Usamos select_related('client') para traer los datos del cliente en la misma consulta
-    # y así evitar el problema N+1 que causaba el timeout.
-    # NOTA: 'client' debe ser el nombre del campo ForeignKey en tu modelo Sales.
     sales_query = Sales.objects.select_related('client').filter(sucursal=sucursal_a_usar)
     salidas_query = Salida.objects.filter(sucursal=sucursal_a_usar)
 
     start_date_str = today.strftime('%Y-%m-%d')
     end_date_str = tomorrow.strftime('%Y-%m-%d')
 
-    # Lógica de filtros por cliente o por fecha
     if client_id:
         sales_query = sales_query.filter(client_id=client_id)
         start_date_str = ''
@@ -1208,13 +1198,12 @@ def salesList(request):
         end_date_str = request.GET.get('end_date', end_date_str)
         start_date = timezone.datetime.strptime(start_date_str, '%Y-%m-%d').date()
         end_date = timezone.datetime.strptime(end_date_str, '%Y-%m-%d').date()
-
         sales_query = sales_query.filter(date_added__date__range=[start_date, end_date])
         salidas_query = salidas_query.filter(fecha__range=[start_date, end_date])
-
-    # --- LÓGICA DE FILTROS ADICIONALES (RESTAURADA) ---
+    
+    # ... (TODA TU LÓGICA DE FILTROS ADICIONALES VA AQUÍ, SIN CAMBIOS) ...
     filters = {
-        'formapago_id': 'tipoPago_id', # Asegúrate que el filtro sea sobre el campo correcto (ej. tipoPago_id)
+        'formapago_id': 'tipoPago_id',
         'producto_id': 'id__in',
         'categoria_id': 'id__in',
         'tipo_inscripcion_id': 'id__in'
@@ -1223,37 +1212,48 @@ def salesList(request):
         value = request.GET.get(param)
         if value:
             if param == 'producto_id':
-                # Subconsulta para obtener las ventas que contienen un producto específico
                 sale_ids = salesItems.objects.filter(product_id=value, product__sucursal=sucursal_a_usar).values_list('sale_id', flat=True)
                 sales_query = sales_query.filter(id__in=sale_ids)
             elif param == 'categoria_id':
-                # Subconsulta para obtener las ventas que contienen productos de una categoría específica
                 sale_ids = salesItems.objects.filter(product__category_id=value, product__sucursal=sucursal_a_usar).values_list('sale_id', flat=True)
                 sales_query = sales_query.filter(id__in=sale_ids)
             elif param == 'tipo_inscripcion_id':
-                # Subconsulta para ventas que contienen un plan de inscripción específico
                 plan = PlanInscripcion.objects.get(id=value, sucursal=sucursal_a_usar)
                 sale_ids = salesItems.objects.filter(product_name__icontains=plan.nombre).values_list('sale_id', flat=True)
                 sales_query = sales_query.filter(id__in=sale_ids)
             else:
-                # Filtro directo (ej. por forma de pago)
                 sales_query = sales_query.filter(**{filter_key: value})
 
-    # Ordenar y realizar cálculos
+    # Ordenar ANTES de calcular totales
     sales_query = sales_query.order_by('-date_added')
 
+    # --- CÁLCULO DE TOTALES (SIN CAMBIOS) ---
+    # Se calculan sobre el queryset COMPLETO Y FILTRADO. Esto es correcto.
     total_money = Decimal(sales_query.aggregate(Sum('grand_total'))['grand_total__sum'] or 0).quantize(Decimal('0.00'), rounding=ROUND_HALF_UP)
     totalSalidas = Decimal(salidas_query.aggregate(Sum('monto'))['monto__sum'] or 0).quantize(Decimal('0.00'), rounding=ROUND_HALF_UP)
     totalEfectivo = Decimal(sales_query.filter(tipoPago_id=1).aggregate(Sum('grand_total'))['grand_total__sum'] or 0).quantize(Decimal('0.00'), rounding=ROUND_HALF_UP)
     totalBanco = Decimal(sales_query.filter(tipoPago_id=2).aggregate(Sum('grand_total'))['grand_total__sum'] or 0).quantize(Decimal('0.00'), rounding=ROUND_HALF_UP)
     totalTarjeta = Decimal(sales_query.filter(tipoPago_id=4).aggregate(Sum('grand_total'))['grand_total__sum'] or 0).quantize(Decimal('0.00'), rounding=ROUND_HALF_UP)
 
-    tipo_pago_dict = {1: "Efectivo", 2: "Banco", 3: "Efectivo y Tarjeta", 4:"Tarjeta"}
+    # --- LÓGICA DE PAGINACIÓN ---
+    # 2. Aplica la paginación DESPUÉS de calcular los totales
+    paginator = Paginator(sales_query, 25)  # Mostrar 25 ventas por página
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
 
-    # --- BUCLE OPTIMIZADO ---
-    # Gracias a select_related, este bucle ya no hace consultas a la base de datos.
+    # Para mantener los filtros al cambiar de página
+    query_params = request.GET.copy()
+    if 'page' in query_params:
+        del query_params['page']
+    query_params = query_params.urlencode()
+
+
+    tipo_pago_dict = {1: "Efectivo", 2: "Banco", 3: "Efectivo y Tarjeta", 4:"Tarjeta"}
+    
+    # --- BUCLE OPTIMIZADO SOBRE LA PÁGINA ACTUAL ---
+    # 3. Itera sobre `page_obj` en lugar de `sales_query`
     sales = []
-    for sale in sales_query:
+    for sale in page_obj:
         client_name = 'No Client'
         horario = 'No Schedule'
         plan_inscripcion = None
@@ -1276,7 +1276,9 @@ def salesList(request):
 
     context = {
         'page_title': 'Sales Transactions',
-        'sales_data': sales,
+        'sales_data': sales, # Ahora contiene solo las ventas de la página actual
+        'page_obj': page_obj, # El objeto de paginación para los controles
+        'query_params': query_params, # Para mantener los filtros en los links
         'salida_data': list(salidas_query),
         'total_ventas': total_money,
         'total_salidas': totalSalidas,
@@ -1902,3 +1904,32 @@ def export_sales_to_excel(request):
     wb.save(response)
 
     return response
+
+
+
+import requests
+import base64
+from django.http import HttpResponse
+
+def image_proxy(request, image_url_b64):
+    try:
+        # Decodificar la URL de la imagen desde Base64
+        image_url = base64.urlsafe_b64decode(image_url_b64).decode('utf-8')
+
+        # Hacer la petición a la URL externa (Facebook)
+        response = requests.get(image_url, stream=True)
+
+        # Verificar que la petición fue exitosa
+        if response.status_code == 200:
+            # Obtener el tipo de contenido (ej. 'image/jpeg')
+            content_type = response.headers['Content-Type']
+            
+            # Devolver una respuesta HTTP con el contenido de la imagen y el tipo correcto
+            return HttpResponse(response.content, content_type=content_type)
+        else:
+            # Si hay un error (ej. 404), devolver un error
+            return HttpResponse(status=response.status_code)
+
+    except Exception as e:
+        # Manejar cualquier otro error
+        return HttpResponse(status=500)

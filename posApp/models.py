@@ -43,6 +43,8 @@ class UserProfile(models.Model):
     is_seller = models.BooleanField(default=False)
     is_manager = models.BooleanField(default=False)
     sucursales = models.ManyToManyField(Sucursal, related_name='managers', blank=True)
+    is_modelo = models.BooleanField(default=False)  # Nuevo campo para Acuática Modelo
+    is_modelo_manager = models.BooleanField(default=False)  # Nuevo campo para Acuática Modelo Manager
 
     def __str__(self):
         return self.user.username

@@ -43,4 +43,5 @@ urlpatterns = [
     path('export_sales_to_excel/', views.export_sales_to_excel, name='export_sales_to_excel'),
     path('api/clientes/search/', views.buscar_clientes, name='buscar_clientes'),
     path('reportes/mensual/', views.dashboard_report, name='monthly_report'),
+    path('proxy/image/<str:image_url_b64>/', views.image_proxy, name='image_proxy'),
 ]
