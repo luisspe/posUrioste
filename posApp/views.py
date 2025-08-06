@@ -1201,7 +1201,7 @@ def salesList(request):
         sales_query = sales_query.filter(date_added__date__range=[start_date, end_date])
         salidas_query = salidas_query.filter(fecha__range=[start_date, end_date])
     
-    # ... (TODA TU LÓGICA DE FILTROS ADICIONALES VA AQUÍ, SIN CAMBIOS) ...
+    # Filtros adicionales
     filters = {
         'formapago_id': 'tipoPago_id',
         'producto_id': 'id__in',
@@ -1212,46 +1212,55 @@ def salesList(request):
         value = request.GET.get(param)
         if value:
             if param == 'producto_id':
-                sale_ids = salesItems.objects.filter(product_id=value, product__sucursal=sucursal_a_usar).values_list('sale_id', flat=True)
+                # CORRECCIÓN: Se cambió 'product__sucursal' por 'product_id__sucursal'
+                sale_ids = salesItems.objects.filter(
+                    product_id=value, 
+                    product_id__sucursal=sucursal_a_usar  # <--- AQUÍ
+                ).values_list('sale_id', flat=True)
                 sales_query = sales_query.filter(id__in=sale_ids)
+
             elif param == 'categoria_id':
-                sale_ids = salesItems.objects.filter(product__category_id=value, product__sucursal=sucursal_a_usar).values_list('sale_id', flat=True)
+                # CORRECCIÓN: Se cambió 'product__category_id' por 'product_id__category_id'
+                sale_ids = salesItems.objects.filter(
+                    product_id__category_id=value,      # <--- AQUÍ
+                    product_id__sucursal=sucursal_a_usar
+                ).values_list('sale_id', flat=True)
                 sales_query = sales_query.filter(id__in=sale_ids)
+                
             elif param == 'tipo_inscripcion_id':
                 plan = PlanInscripcion.objects.get(id=value, sucursal=sucursal_a_usar)
-                sale_ids = salesItems.objects.filter(product_name__icontains=plan.nombre).values_list('sale_id', flat=True)
+                sale_ids = salesItems.objects.filter(
+                    product_name__icontains=plan.nombre
+                ).values_list('sale_id', flat=True)
                 sales_query = sales_query.filter(id__in=sale_ids)
             else:
                 sales_query = sales_query.filter(**{filter_key: value})
 
-    # Ordenar ANTES de calcular totales
+
+    # Ordenar
     sales_query = sales_query.order_by('-date_added')
 
-    # --- CÁLCULO DE TOTALES (SIN CAMBIOS) ---
-    # Se calculan sobre el queryset COMPLETO Y FILTRADO. Esto es correcto.
+    # Cálculo de totales
     total_money = Decimal(sales_query.aggregate(Sum('grand_total'))['grand_total__sum'] or 0).quantize(Decimal('0.00'), rounding=ROUND_HALF_UP)
     totalSalidas = Decimal(salidas_query.aggregate(Sum('monto'))['monto__sum'] or 0).quantize(Decimal('0.00'), rounding=ROUND_HALF_UP)
     totalEfectivo = Decimal(sales_query.filter(tipoPago_id=1).aggregate(Sum('grand_total'))['grand_total__sum'] or 0).quantize(Decimal('0.00'), rounding=ROUND_HALF_UP)
     totalBanco = Decimal(sales_query.filter(tipoPago_id=2).aggregate(Sum('grand_total'))['grand_total__sum'] or 0).quantize(Decimal('0.00'), rounding=ROUND_HALF_UP)
     totalTarjeta = Decimal(sales_query.filter(tipoPago_id=4).aggregate(Sum('grand_total'))['grand_total__sum'] or 0).quantize(Decimal('0.00'), rounding=ROUND_HALF_UP)
 
-    # --- LÓGICA DE PAGINACIÓN ---
-    # 2. Aplica la paginación DESPUÉS de calcular los totales
-    paginator = Paginator(sales_query, 25)  # Mostrar 25 ventas por página
+    # Paginación
+    paginator = Paginator(sales_query, 25)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    # Para mantener los filtros al cambiar de página
+    # Mantener parámetros de filtro
     query_params = request.GET.copy()
     if 'page' in query_params:
         del query_params['page']
     query_params = query_params.urlencode()
 
-
     tipo_pago_dict = {1: "Efectivo", 2: "Banco", 3: "Efectivo y Tarjeta", 4:"Tarjeta"}
     
-    # --- BUCLE OPTIMIZADO SOBRE LA PÁGINA ACTUAL ---
-    # 3. Itera sobre `page_obj` en lugar de `sales_query`
+    # Preparar datos para la vista
     sales = []
     for sale in page_obj:
         client_name = 'No Client'
@@ -1276,9 +1285,9 @@ def salesList(request):
 
     context = {
         'page_title': 'Sales Transactions',
-        'sales_data': sales, # Ahora contiene solo las ventas de la página actual
-        'page_obj': page_obj, # El objeto de paginación para los controles
-        'query_params': query_params, # Para mantener los filtros en los links
+        'sales_data': sales,
+        'page_obj': page_obj,
+        'query_params': query_params,
         'salida_data': list(salidas_query),
         'total_ventas': total_money,
         'total_salidas': totalSalidas,
