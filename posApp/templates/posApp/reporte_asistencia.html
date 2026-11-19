@@ -1,0 +1,213 @@
+{% extends "posApp/base.html" %}
+{% load static %}
+{% block pageContent %}
+<div class="u-page">
+    <header class="u-head">
+        <div>
+            <h1 class="u-title">Reporte de asistencia</h1>
+            <p class="u-subtitle" id="subtitulo">
+                {% if fecha_inicio == fecha_fin %}{{ fecha_inicio|date:"l j \d\e F"|lower }}
+                {% else %}Del {{ fecha_inicio|date:"j \d\e F"|lower }} al {{ fecha_fin|date:"j \d\e F \d\e Y"|lower }}{% endif %}{% if grupo %}, grupo {{ grupo.nombre }}{% endif %}
+            </p>
+        </div>
+        <span class="u-head__acciones">
+            <button type="button" class="u-btn u-btn--ghost" data-guia-abrir>
+                <span class="material-symbols-rounded" aria-hidden="true">help</span>¿Cómo funciona?
+            </button>
+            <a href="{% url 'exportar-asistencia-excel' %}?{{ qs_excel }}" class="u-btn u-btn--ghost" id="exportar">
+                <span class="material-symbols-rounded" aria-hidden="true">download</span>Exportar a Excel
+            </a>
+        </span>
+    </header>
+
+    <section class="u-panel u-filtros" aria-label="Periodo y filtros">
+        <div class="u-filtros__fila">
+            <div class="u-chips" id="periodos">
+                {% for p in periodos %}
+                <a class="u-chip{% if p.activo %} is-active{% endif %}"
+                   href="?{{ qs_sin_fechas }}&fecha_inicio={{ p.inicio|date:'Y-m-d' }}&fecha_fin={{ p.fin|date:'Y-m-d' }}">{{ p.nombre }}</a>
+                {% endfor %}
+            </div>
+        </div>
+        <form method="GET" class="u-filtros__fila u-reporte__filtros" id="filtros-reporte">
+            <input type="hidden" name="vista" value="{{ vista }}">
+            <label class="u-campo">
+                <span>Desde</span>
+                <input type="date" name="fecha_inicio" value="{{ fecha_inicio|date:'Y-m-d' }}" class="u-input">
+            </label>
+            <label class="u-campo">
+                <span>Hasta</span>
+                <input type="date" name="fecha_fin" value="{{ fecha_fin|date:'Y-m-d' }}" class="u-input">
+            </label>
+            <label class="u-campo u-campo--ancho">
+                <span>Grupo</span>
+                <select name="grupo" class="u-input" data-combo>
+                    <option value="">Todos los grupos</option>
+                    {% for g in grupos %}
+                    <option value="{{ g.id }}" {% if grupo.id == g.id %}selected{% endif %}>{{ g.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label class="u-campo">
+                <span>Horario</span>
+                <select name="horario" class="u-input" data-combo>
+                    <option value="">Todos</option>
+                    {% for h in horarios %}
+                    <option value="{{ h }}" {% if horario|lower == h|lower %}selected{% endif %}>{{ h }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label class="u-campo">
+                <span>Nivel</span>
+                <select name="nivel" class="u-input" data-combo>
+                    <option value="">Todos</option>
+                    {% for nivel in niveles %}
+                    <option value="{{ nivel.id }}" {% if nivel_id == nivel.id|stringformat:"s" %}selected{% endif %}>{{ nivel.level }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label class="u-campo u-campo--ancho">
+                <span>Alumno</span>
+                <input type="search" name="q" value="{{ query }}" placeholder="Nombre o celular" class="u-input" autocomplete="off" autocapitalize="words">
+            </label>
+            <noscript><button type="submit" class="u-btn u-btn--primary">Aplicar</button></noscript>
+        </form>
+    </section>
+
+    <div id="resultados" aria-live="polite">
+    <section class="u-reporte__resumen" aria-label="Resumen del periodo">
+        <div class="u-panel u-dato">
+            <h2 class="u-dato__titulo">Asistencias</h2>
+            <p class="u-dato__cifra">{{ resumen.asistencias }}</p>
+            <p class="u-dato__nota">Llegadas registradas en el periodo</p>
+        </div>
+        <div class="u-panel u-dato">
+            <h2 class="u-dato__titulo">Alumnos que vinieron</h2>
+            <p class="u-dato__cifra">{{ resumen.vinieron }}<small> de {{ resumen.activos }} activos</small></p>
+            <p class="u-dato__nota">{% if resumen.vinieron %}Vinieron {{ resumen.promedio }} días en promedio{% else %}Nadie registrado todavía{% endif %}</p>
+        </div>
+        <a class="u-panel u-dato u-dato--alerta{% if not resumen.deben %} sin-alerta{% endif %}" href="?{{ qs_sin_vista }}&vista=deben">
+            <h2 class="u-dato__titulo">Vinieron y deben</h2>
+            <p class="u-dato__cifra">{{ resumen.deben }}</p>
+            <p class="u-dato__nota">{% if resumen.deben %}Tienen el pago vencido o sin registrar. Ver la lista{% else %}Todos los que vinieron están al corriente{% endif %}</p>
+        </a>
+    </section>
+
+    <nav class="u-pestanas" aria-label="Qué alumnos ver">
+        {% for clave, nombre, total in vistas %}
+        <a class="u-pestana{% if vista == clave %} is-active{% endif %}{% if clave == 'deben' and total %} es-alerta{% endif %}" href="?{{ qs_sin_vista }}&vista={{ clave }}"{% if vista == clave %} aria-current="page"{% endif %}>
+            {{ nombre }} <span class="u-pestana__total">{{ total }}</span>
+        </a>
+        {% endfor %}
+    </nav>
+
+    {% if filas %}
+    <div class="u-panel u-clientes">
+        {% for fila in filas %}
+        {% with c=fila.cliente %}
+        <div class="u-cliente u-reporte__fila">
+            <a class="u-cliente__quien" href="{% url 'cliente-ficha' c.pk %}">
+                <span class="u-avatar" aria-hidden="true">{{ c.iniciales }}</span>
+                <span class="u-cliente__datos">
+                    <span class="u-alumno__nombre">{{ c.nombre }} {{ c.apellido_paterno }} {{ c.apellido_materno }}</span>
+                    <span class="u-alumno__tags">
+                        {% if c.nivel %}<span class="u-tag">{{ c.nivel }}</span>{% endif %}
+                        {% for g in c.grupos.all %}<span class="u-tag u-tag--grupo">{{ g.nombre }}</span>{% empty %}
+                        {% if c.horario %}<span class="u-tag">{{ c.horario }}</span>{% endif %}{% endfor %}
+                    </span>
+                </span>
+            </a>
+
+            <div class="u-reporte__asistencia">
+                {% if vista == 'ausentes' %}
+                {% if c.ultima_asistencia %}
+                <span class="u-reporte__dias">{{ c.ultima_asistencia|date:"d/m/Y" }}</span>
+                <span class="u-pago__detalle">Última vez que vino, hace {{ c.ultima_asistencia|timesince:fecha_fin }}</span>
+                {% else %}
+                <span class="u-reporte__dias">Sin asistencias</span>
+                <span class="u-pago__detalle">No hay registro de que haya venido{% if c.faltas %}. {{ c.faltas }} falta{{ c.faltas|pluralize }} en el periodo{% endif %}</span>
+                {% endif %}
+                {% else %}
+                <span class="u-reporte__dias">{{ fila.dias }} día{{ fila.dias|pluralize }}</span>
+                <span class="u-pago__detalle">
+                    {% if c.retardos %}{{ c.retardos }} con retardo. {% endif %}{% if c.faltas %}{{ c.faltas }} falta{{ c.faltas|pluralize }}. {% endif %}{% if c.justificadas %}{{ c.justificadas }} justificada{{ c.justificadas|pluralize }}. {% endif %}Última vez el {{ c.ultima_asistencia|date:"d/m" }}
+                </span>
+                {% endif %}
+            </div>
+
+            <div class="u-cliente__pago">{% include "posApp/_estado_pago.html" with pago=fila.pago cliente=c %}</div>
+        </div>
+        {% endwith %}
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="u-panel u-vacio">
+        {% if vista == 'deben' %}
+        <span class="material-symbols-rounded">verified</span>
+        <strong>Nadie que vino debe</strong>
+        Todos los alumnos que vinieron en este periodo están al corriente.
+        {% elif vista == 'ausentes' %}
+        <span class="material-symbols-rounded">groups</span>
+        <strong>Todos los alumnos activos vinieron</strong>
+        No hay alumnos activos sin asistencia en este periodo.
+        {% else %}
+        <span class="material-symbols-rounded">event_busy</span>
+        <strong>No hay asistencias en este periodo</strong>
+        Se registran con el check-in QR o en el pase de lista. Prueba con otro periodo u horario.
+        {% endif %}
+    </div>
+    {% endif %}
+    </div>
+</div>
+<div class="u-guia" data-guia role="dialog" aria-modal="true" aria-labelledby="guia-titulo">
+    <div class="u-guia__caja">
+        <section class="u-guia__paso activo">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/reporte_asistencia_1.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2 id="guia-titulo">1. Elige el periodo y el grupo</h2>
+            <p>Usa Hoy, Esta semana, Este mes o Mes pasado, o pon las fechas. Puedes filtrar por grupo, horario, nivel o alumno.</p>
+            <p>Arriba ves cuántas asistencias hubo y cuántos alumnos vinieron.</p>
+        </section>
+        <section class="u-guia__paso">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/reporte_asistencia_2.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2>2. Quién debe y quién falta</h2>
+            <p>«Vinieron y deben» son alumnos que vinieron con el pago vencido: hay que cobrarles. «No han venido» son alumnos activos sin asistencias en el periodo.</p>
+            <p>Con «Exportar a Excel» te llevas la lista.</p>
+        </section>
+    </div>
+</div>
+{% include "posApp/_guia_pasos.html" %}
+{% endblock pageContent %}
+
+{% block ScriptBlock %}
+<script>
+    $(function() {
+        var $form = $('#filtros-reporte');
+        var timer = null, peticion = null;
+
+        // Búsqueda en vivo: pide el mismo reporte con los filtros y cambia solo lo que depende de ellos
+        function actualizar() {
+            var params = $form.find(':input').filter(function() { return this.name && this.value; }).serialize();
+            var url = "{% url 'reporte-asistencia' %}" + (params ? '?' + params : '');
+            if (peticion) peticion.abort();
+            $('#resultados').css('opacity', .55);
+            peticion = $.get(url, function(html) {
+                var doc = new DOMParser().parseFromString(html, 'text/html');
+                ['resultados', 'periodos', 'subtitulo'].forEach(function(id) {
+                    document.getElementById(id).innerHTML = doc.getElementById(id).innerHTML;
+                });
+                document.getElementById('exportar').href = doc.getElementById('exportar').getAttribute('href');
+                history.replaceState(null, '', url);
+            }).always(function() {
+                $('#resultados').css('opacity', 1);
+            });
+        }
+
+        $form.on('input', 'input[name=q]', function() {
+            clearTimeout(timer);
+            timer = setTimeout(actualizar, 300);
+        });
+        $form.on('change', 'select, input[type=date]', actualizar);
+        $form.on('submit', function(e) { e.preventDefault(); actualizar(); });
+    });
+</script>
+{% endblock ScriptBlock %}

@@ -134,7 +134,68 @@ class Clientes(models.Model):
 
     def __str__(self):
         return str(self.nombre)
+
+    @property
+    def iniciales(self):
+        # Varios nombres se capturaron con espacios o puntos al inicio
+        letras = [next((ch for ch in (texto or '') if ch.isalpha()), '') for texto in (self.nombre, self.apellido_paterno)]
+        return ''.join(letras).upper() or '?'
+
+    @property
+    def codigo_asistencia(self):
+        # Contenido del QR de la credencial; el check-in también acepta solo el número
+        return f"URI{self.id}"
     
+class Grupo(models.Model):
+    """Una clase que se repite: por ejemplo "Niños martes y jueves 17:00"."""
+    nombre = models.CharField(max_length=100)
+    sucursal = models.ForeignKey(Sucursal, on_delete=models.CASCADE)
+    # Días de la semana como dígitos (0 = lunes ... 6 = domingo); vacío = todos los días
+    dias = models.CharField(max_length=7, blank=True, default='')
+    hora_inicio = models.TimeField(null=True, blank=True)
+    nivel = models.ForeignKey(Levels, on_delete=models.SET_NULL, null=True, blank=True)
+    activo = models.BooleanField(default=True)
+    clientes = models.ManyToManyField(Clientes, related_name='grupos', blank=True)
+
+    class Meta:
+        ordering = ['hora_inicio', 'nombre']
+
+    def __str__(self):
+        return self.nombre
+
+    @property
+    def dias_texto(self):
+        from posApp.horarios import describir_dias
+        return describir_dias(self.dias)
+
+    def toca_el(self, fecha):
+        return not self.dias or str(fecha.weekday()) in self.dias
+
+    def se_cruza_con(self, otro):
+        """Dos clases chocan si empiezan con menos de 45 min de diferencia y comparten algún día."""
+        if not self.hora_inicio or not otro.hora_inicio:
+            return False
+        minutos = lambda h: h.hour * 60 + h.minute
+        if abs(minutos(self.hora_inicio) - minutos(otro.hora_inicio)) >= 45:
+            return False
+        return not self.dias or not otro.dias or bool(set(self.dias) & set(otro.dias))
+
+    def inscribir(self, cliente, actualizar_horario=False):
+        """
+        Inscribe al alumno por un pago y lo saca de los grupos de su sucursal que chocan con este
+        (no puede estar en dos clases a la misma hora). Regresa los grupos de los que salió.
+        Con actualizar_horario, el horario del alumno pasa a ser el nombre del grupo.
+        """
+        cruzados = [g for g in cliente.grupos.filter(sucursal=self.sucursal).exclude(id=self.id) if self.se_cruza_con(g)]
+        for grupo in cruzados:
+            grupo.clientes.remove(cliente)
+        self.clientes.add(cliente)
+        if actualizar_horario and cliente.horario != self.nombre:
+            cliente.horario = self.nombre
+            Clientes.objects.filter(id=cliente.id).update(horario=self.nombre)
+        return cruzados
+
+
 class Mensualidad(models.Model):
     cliente = models.ForeignKey(Clientes, on_delete=models.CASCADE, blank=True, null=True)
     fecha_vencimiento = models.DateField(blank=True, null=True)
@@ -168,6 +229,10 @@ class Products(models.Model):
     date_updated = models.DateTimeField(auto_now=True)
     sucursal = models.ForeignKey(Sucursal, on_delete=models.SET_NULL, null=True, blank=True)
     cantidad_disponible = models.IntegerField(default=0)  # Nueva columna para inventario
+    # Días de clases que cubre al venderse (ej. 30 para una mensualidad). Vacío = no cuenta como pago de clases
+    dias_vigencia = models.PositiveIntegerField(null=True, blank=True)
+    # Al venderlo, el cliente queda inscrito en este grupo
+    grupo = models.ForeignKey('Grupo', on_delete=models.SET_NULL, null=True, blank=True, related_name='productos')
 
     def __str__(self):
         return self.code + " - " + self.name
@@ -195,6 +260,8 @@ class Sales(models.Model):
     usuario = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     tipoPago = models.ForeignKey(FormaPago, on_delete=models.PROTECT, db_index=True)
     comentario = models.CharField(max_length=700, null=True)
+    # Fecha en que el cliente debe volver a pagar; antes solo se anotaba a mano en el comentario del ticket
+    proximo_pago = models.DateField(null=True, blank=True)
     sucursal = models.ForeignKey(Sucursal, on_delete=models.SET_NULL, null=True, blank=True, db_index=True)
 
     def __str__(self):
@@ -226,4 +293,35 @@ class Salida(models.Model):
         return f"{self.concepto} - {self.monto} - {self.fecha}"
 
 
+class Asistencia(models.Model):
+    PRESENTE = 'P'
+    FALTA = 'F'
+    RETARDO = 'R'
+    JUSTIFICADA = 'J'
+    ESTADO_CHOICES = (
+        (PRESENTE, 'Presente'),
+        (FALTA, 'Falta'),
+        (RETARDO, 'Retardo'),
+        (JUSTIFICADA, 'Justificada'),
+    )
 
+    cliente = models.ForeignKey(Clientes, on_delete=models.CASCADE)
+    fecha = models.DateField(db_index=True)
+    estado = models.CharField(max_length=1, choices=ESTADO_CHOICES)
+    comentario = models.CharField(max_length=200, blank=True, default='')
+    hora_llegada = models.TimeField(null=True, blank=True)  # Se llena al hacer check-in con QR
+    grupo = models.ForeignKey(Grupo, on_delete=models.SET_NULL, null=True, blank=True)
+    sucursal = models.ForeignKey(Sucursal, on_delete=models.SET_NULL, null=True, blank=True)
+    registrado_por = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    fecha_registro = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.cliente} - {self.fecha} - {self.get_estado_display()}"
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['cliente', 'fecha'], name='asistencia_cliente_fecha_uniq'),
+        ]
+        indexes = [
+            models.Index(fields=['sucursal', 'fecha'], name='asistencia_sucursal_fecha_idx'),
+        ]

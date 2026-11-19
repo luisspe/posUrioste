@@ -1,5 +1,5 @@
 from django.contrib import admin
-from posApp.models import Category, Products, Sales, salesItems, Clientes, Genero, Levels, FormaPago, UserProfile, Sucursal,Salida, PlanInscripcion, Mensualidad
+from posApp.models import Category, Products, Sales, salesItems, Clientes, Genero, Levels, FormaPago, UserProfile, Sucursal,Salida, PlanInscripcion, Mensualidad, Asistencia, Grupo
 
 # Register your models here.
 admin.site.register(Category)
@@ -15,4 +15,6 @@ admin.site.register(Sucursal)
 admin.site.register(Salida)
 admin.site.register(PlanInscripcion)
 admin.site.register(Mensualidad)
+admin.site.register(Asistencia)
+admin.site.register(Grupo)
 # admin.site.register(Employees)

@@ -1,0 +1,154 @@
+{% extends "posApp/base.html" %}
+{% load humanize %}
+{% block pageContent %}
+<div class="u-page">
+    <a href="{% url 'client-page' %}" class="u-volver"><span class="material-symbols-rounded" aria-hidden="true">arrow_back</span>Clientes</a>
+
+    <header class="u-ficha__head">
+        <span class="u-avatar u-avatar--grande" aria-hidden="true">{{ cliente.iniciales }}</span>
+        <div class="u-ficha__quien">
+            <h1 class="u-title">{{ cliente.nombre }} {{ cliente.apellido_paterno }} {{ cliente.apellido_materno }}</h1>
+            <div class="u-alumno__tags">
+                {% if cliente.status == 1 %}<span class="u-tag u-tag--activo">Activo</span>
+                {% elif cliente.status == 2 %}<span class="u-tag u-tag--baja">Inactivo</span>
+                {% elif cliente.status == 3 %}<span class="u-tag u-tag--baja">Baja temporal</span>
+                {% elif cliente.status == 4 %}<span class="u-tag u-tag--baja">Baja definitiva</span>{% endif %}
+                {% if cliente.nivel %}<span class="u-tag">{{ cliente.nivel }}</span>{% endif %}
+                {% if cliente.horario %}<span class="u-tag">{{ cliente.horario }}</span>{% endif %}
+                {% if cliente.plan_inscripcion %}<span class="u-tag">{{ cliente.plan_inscripcion }}</span>{% endif %}
+                <span class="u-tag">{{ cliente.codigo_asistencia }}</span>
+            </div>
+        </div>
+        <div class="u-ficha__acciones">
+            <a class="u-btn u-btn--primary" href="{% url 'pos-page' %}?cliente={{ cliente.id }}"><span class="material-symbols-rounded" aria-hidden="true">point_of_sale</span>Cobrar</a>
+            <button type="button" class="u-btn u-btn--ghost" id="editar-cliente"><span class="material-symbols-rounded" aria-hidden="true">edit</span>Editar</button>
+            <a class="u-btn u-btn--ghost ver-credencial" href="{% url 'cliente-credencial' cliente.id %}" data-codigo="{{ cliente.codigo_asistencia }}" data-nombre="{{ cliente.nombre }} {{ cliente.apellido_paterno }} {{ cliente.apellido_materno }}" data-grupo="{% if cliente.nivel %}{{ cliente.nivel }}{% endif %}{% if cliente.nivel and cliente.horario %}, {% endif %}{{ cliente.horario }}"><span class="material-symbols-rounded" aria-hidden="true">qr_code_2</span>Credencial</a>
+        </div>
+    </header>
+
+    <section class="u-ficha__resumen">
+        <div class="u-panel u-dato">
+            <h2 class="u-dato__titulo">Estado de pago</h2>
+            {% include "posApp/_estado_pago.html" with pago=pago cliente=cliente %}
+            {% if cliente.pay_day %}<p class="u-dato__nota">Día de pago: {{ cliente.pay_day }}</p>{% endif %}
+        </div>
+        <div class="u-panel u-dato">
+            <h2 class="u-dato__titulo">Asistencia</h2>
+            <p class="u-dato__cifra">{% if totales.porcentaje is not None %}{{ totales.porcentaje }}%{% else %}Sin registros{% endif %}</p>
+            <p class="u-dato__nota">{{ totales.presentes }} presente{{ totales.presentes|pluralize }}, {{ totales.retardos }} retardo{{ totales.retardos|pluralize }}, {{ totales.faltas }} falta{{ totales.faltas|pluralize }}{% if totales.justificadas %}, {{ totales.justificadas }} justificada{{ totales.justificadas|pluralize }}{% endif %}</p>
+        </div>
+        <div class="u-panel u-dato">
+            <h2 class="u-dato__titulo">Pagos registrados</h2>
+            <p class="u-dato__cifra">${{ total_pagado|floatformat:2|intcomma }}</p>
+            <p class="u-dato__nota">En {{ numero_pagos }} venta{{ numero_pagos|pluralize }} a su nombre</p>
+        </div>
+    </section>
+
+    <div class="u-ficha__cuerpo">
+        <section class="u-panel u-seccion">
+            <h2 class="u-seccion__titulo">Pagos y compras</h2>
+            {% if pagos %}
+            <ul class="u-movimientos">
+                {% for p in pagos %}
+                <li class="u-movimiento">
+                    <span class="u-movimiento__fecha">
+                        <b>{{ p.venta.date_added|date:"d M Y" }}</b>
+                        {{ p.venta.date_added|time:"H:i" }}
+                    </span>
+                    <span class="u-movimiento__detalle">
+                        <span class="u-movimiento__concepto">{{ p.conceptos|join:", "|default:"Sin conceptos" }}</span>
+                        {% if p.venta.proximo_pago %}<span class="u-tag u-tag--proximo">Próximo pago {{ p.venta.proximo_pago|date:"d/m/Y" }}</span>{% endif %}
+                        <span class="u-pago__detalle">{{ p.venta.tipoPago }}{% if p.venta.usuario %}, cobró {{ p.venta.usuario.username }}{% endif %}{% if p.venta.comentario %}. {{ p.venta.comentario }}{% endif %}</span>
+                    </span>
+                    <span class="u-movimiento__total">${{ p.venta.grand_total|floatformat:2|intcomma }}</span>
+                    <button type="button" class="u-btn u-btn--ghost u-btn--icon ver-ticket" data-id="{{ p.venta.id }}" title="Ver ticket" aria-label="Ver ticket del {{ p.venta.date_added|date:'d/m/Y' }}"><span class="material-symbols-rounded">receipt_long</span></button>
+                </li>
+                {% endfor %}
+            </ul>
+            {% if numero_pagos > pagos|length %}<p class="u-dato__nota">Se muestran los {{ pagos|length }} más recientes de {{ numero_pagos }}.</p>{% endif %}
+            {% else %}
+            <p class="u-dato__nota">Este cliente no tiene ventas registradas.</p>
+            {% endif %}
+        </section>
+
+        <div class="u-ficha__lateral">
+            <section class="u-panel u-seccion">
+                <h2 class="u-seccion__titulo">Grupos</h2>
+                <ul class="u-miembros">
+                    {% for g in grupos_cliente %}
+                    <li>
+                        <a href="{% url 'grupo-editar' g.id %}" class="u-alumno__nombre">{{ g.nombre }}<span class="u-pago__detalle d-block">{{ g.dias_texto }}{% if g.hora_inicio %}, {{ g.hora_inicio|time:"H:i" }}{% endif %}</span></a>
+                        <button type="button" class="u-btn u-btn--ghost u-btn--icon u-btn--peligro grupo-accion" data-grupo="{{ g.id }}" data-accion="quitar" title="Quitar de este grupo" aria-label="Quitar de {{ g.nombre }}"><span class="material-symbols-rounded">close</span></button>
+                    </li>
+                    {% empty %}
+                    <li class="u-dato__nota">No está en ningún grupo, así que no aparece en el pase de lista.</li>
+                    {% endfor %}
+                </ul>
+                {% if grupos_disponibles %}
+                <div class="u-agregar-grupo">
+                    <select class="u-input" id="nuevo-grupo" aria-label="Agregar a un grupo">
+                        <option value="">Agregar a un grupo…</option>
+                        {% for g in grupos_disponibles %}<option value="{{ g.id }}">{{ g.nombre }}</option>{% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+            </section>
+
+            <section class="u-panel u-seccion">
+                <h2 class="u-seccion__titulo">Asistencias</h2>
+                {% if asistencias %}
+                <ul class="u-asistencias">
+                    {% for a in asistencias %}
+                    <li>
+                        <span class="u-asistencia__fecha">{{ a.fecha|date:"D d M Y" }}</span>
+                        {% if a.estado == 'P' %}<span class="u-pill u-pill--ok">Presente</span>
+                        {% elif a.estado == 'R' %}<span class="u-pill u-pill--warn">Retardo</span>
+                        {% elif a.estado == 'F' %}<span class="u-pill u-pill--bad">Falta</span>
+                        {% else %}<span class="u-pill u-pill--info">Justificada</span>{% endif %}
+                        {% if a.hora_llegada or a.comentario %}
+                        <span class="u-pago__detalle u-asistencia__nota">{% if a.hora_llegada %}Llegó {{ a.hora_llegada|time:"H:i" }}{% endif %}{% if a.hora_llegada and a.comentario %}. {% endif %}{{ a.comentario }}</span>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="u-dato__nota">Aún no tiene asistencias. Se registran con el check-in QR o en el pase de lista.</p>
+                {% endif %}
+            </section>
+
+            <section class="u-panel u-seccion">
+                <h2 class="u-seccion__titulo">Contacto y salud</h2>
+                <dl class="u-datos">
+                    <dt>Celular</dt><dd>{% if cliente.celular %}<a href="tel:{{ cliente.celular }}">{{ cliente.celular }}</a>{% else %}No capturado{% endif %}</dd>
+                    {% if cliente.email %}<dt>Correo</dt><dd>{{ cliente.email }}</dd>{% endif %}
+                    <dt>Emergencias</dt><dd>{{ cliente.contacto_emergencia|default:"No capturado" }}{% if cliente.emergency_phone %} (<a href="tel:{{ cliente.emergency_phone }}">{{ cliente.emergency_phone }}</a>){% endif %}</dd>
+                    <dt>Tipo de sangre</dt><dd>{{ cliente.sangre|default:"No capturado" }}</dd>
+                    <dt>Condición médica</dt><dd>{{ cliente.condicion_medica|default:"Ninguna registrada" }}</dd>
+                    {% if cliente.fecha_nacimiento %}<dt>Nacimiento</dt><dd>{{ cliente.fecha_nacimiento }}</dd>{% endif %}
+                    {% if cliente.direccion %}<dt>Dirección</dt><dd>{{ cliente.direccion }}{% if cliente.suburbio %}, {{ cliente.suburbio }}{% endif %}</dd>{% endif %}
+                </dl>
+            </section>
+        </div>
+    </div>
+</div>
+{% endblock pageContent %}
+{% block ScriptBlock %}
+{% include "posApp/_credencial_modal.html" %}
+<script>
+    $(function() {
+        $('#editar-cliente').click(function() {
+            uni_modal("Editar cliente", "{% url 'manage_clients-page' %}?id={{ cliente.id }}", "modal-xl u-modal-cliente")
+        })
+        function cambiarGrupo(grupo, accion) {
+            $.post("{% url 'grupo-miembro' %}", {csrfmiddlewaretoken: '{{ csrf_token }}', grupo: grupo, cliente: '{{ cliente.id }}', accion: accion})
+                .done(function() { location.reload(); })
+                .fail(function() { alert('No se pudo guardar. Revisa la conexión e inténtalo de nuevo.'); });
+        }
+        $('.grupo-accion').click(function() { cambiarGrupo($(this).data('grupo'), $(this).data('accion')); });
+        $('#nuevo-grupo').change(function() { if (this.value) cambiarGrupo(this.value, 'agregar'); });
+        $('.ver-ticket').click(function() {
+            uni_modal("Ticket de venta", "{% url 'receipt-modal' %}?id=" + $(this).data('id'))
+        })
+    })
+</script>
+{% endblock ScriptBlock %}

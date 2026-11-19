@@ -1,0 +1,119 @@
+{% extends "posApp/base.html" %}
+{% block pageContent %}
+<div class="u-page">
+    <a href="{% url 'grupos' %}" class="u-volver"><span class="material-symbols-rounded" aria-hidden="true">arrow_back</span>Grupos</a>
+    <header class="u-head">
+        <div>
+            <h1 class="u-title">{{ grupo.nombre|default:"Nuevo grupo" }}</h1>
+            {% if grupo.pk %}<p class="u-subtitle">{{ grupo.dias_texto }}{% if grupo.hora_inicio %}, {{ grupo.hora_inicio|time:"H:i" }}{% endif %}. {{ miembros|length }} alumno{{ miembros|length|pluralize }}.</p>{% endif %}
+        </div>
+        {% if grupo.pk %}
+        <a class="u-btn u-btn--ghost" href="{% url 'pase-lista' %}?grupo={{ grupo.id }}">
+            <span class="material-symbols-rounded" aria-hidden="true">fact_check</span>Pasar lista
+        </a>
+        {% endif %}
+    </header>
+
+    <div class="u-ficha__cuerpo">
+        <form method="POST" class="u-panel u-seccion u-form-grupo">
+            {% csrf_token %}
+            <h2 class="u-seccion__titulo">Datos del grupo</h2>
+            <label class="u-campo">
+                <span>Nombre</span>
+                <input type="text" name="nombre" value="{{ grupo.nombre }}" class="u-input" required maxlength="100" placeholder="Ej. Niños martes y jueves 5 pm">
+            </label>
+            <label class="u-campo">
+                <span>Hora de inicio</span>
+                <input type="time" name="hora_inicio" value="{{ grupo.hora_inicio|time:'H:i' }}" class="u-input">
+            </label>
+            <fieldset class="u-campo">
+                <span>Días (sin marcar ninguno = todos los días)</span>
+                <div class="u-dias">
+                    {% for numero, nombre in dias_semana %}
+                    <input type="checkbox" name="dias" value="{{ numero }}" id="dia-{{ numero }}" {% if numero|stringformat:"s" in grupo.dias %}checked{% endif %}>
+                    <label for="dia-{{ numero }}">{{ nombre }}</label>
+                    {% endfor %}
+                </div>
+            </fieldset>
+            <label class="u-campo">
+                <span>Nivel</span>
+                <select name="nivel" class="u-input">
+                    <option value="">Sin nivel</option>
+                    {% for n in niveles %}<option value="{{ n.id }}" {% if grupo.nivel_id == n.id %}selected{% endif %}>{{ n.level }}</option>{% endfor %}
+                </select>
+            </label>
+            <label class="u-campo">
+                <span>Productos que inscriben a este grupo al cobrarlos</span>
+                <select name="productos" id="productos-grupo" class="u-input" multiple>
+                    {% for p in productos %}<option value="{{ p.id }}" {% if p.grupo_id and p.grupo_id == grupo.id %}selected{% endif %}>{{ p.name }}{% if p.grupo_id and p.grupo_id != grupo.id %} (ya en {{ p.grupo }}){% endif %}</option>{% endfor %}
+                </select>
+            </label>
+            <label class="u-check-linea">
+                <input type="checkbox" name="activo" value="1" {% if grupo.activo or not grupo.pk %}checked{% endif %}> Grupo activo
+            </label>
+            <button type="submit" class="u-btn u-btn--primary">Guardar grupo</button>
+        </form>
+
+        {% if grupo.pk %}
+        <section class="u-panel u-seccion">
+            <h2 class="u-seccion__titulo">Alumnos</h2>
+            <div class="u-buscador__campo u-agregar">
+                <span class="material-symbols-rounded" aria-hidden="true">person_add</span>
+                <input type="search" id="buscar-alumno" placeholder="Agregar alumno: nombre o celular" autocomplete="off" aria-label="Agregar alumno al grupo">
+                <ul class="u-sugerencias" id="sugerencias" hidden></ul>
+            </div>
+            <ul class="u-miembros">
+                {% for c in miembros %}
+                <li>
+                    <a href="{% url 'cliente-ficha' c.id %}" class="u-cliente__quien">
+                        <span class="u-avatar" aria-hidden="true">{{ c.iniciales }}</span>
+                        <span class="u-alumno__nombre">{{ c.nombre }} {{ c.apellido_paterno }} {{ c.apellido_materno }}</span>
+                    </a>
+                    <button type="button" class="u-btn u-btn--ghost u-btn--icon u-btn--peligro quitar" data-cliente="{{ c.id }}" title="Quitar del grupo" aria-label="Quitar a {{ c.nombre }} del grupo"><span class="material-symbols-rounded">person_remove</span></button>
+                </li>
+                {% empty %}
+                <li class="u-dato__nota">Este grupo no tiene alumnos. Agrégalos con el buscador.</li>
+                {% endfor %}
+            </ul>
+        </section>
+        {% endif %}
+    </div>
+</div>
+{% endblock pageContent %}
+{% block ScriptBlock %}
+<script>
+    $(function() {
+        $('#productos-grupo').select2({placeholder: 'Ningún producto', width: '100%'});
+
+        function miembro(cliente, accion) {
+            return $.post("{% url 'grupo-miembro' %}", {
+                csrfmiddlewaretoken: '{{ csrf_token }}', grupo: '{{ grupo.id }}', cliente: cliente, accion: accion
+            }).done(function() { location.reload(); })
+              .fail(function() { alert('No se pudo guardar. Revisa la conexión e inténtalo de nuevo.'); });
+        }
+
+        $('.quitar').click(function() { miembro($(this).data('cliente'), 'quitar'); });
+
+        var timer = null;
+        $('#buscar-alumno').on('input', function() {
+            var q = this.value.trim();
+            clearTimeout(timer);
+            if (q.length < 2) { $('#sugerencias').attr('hidden', true).empty(); return; }
+            timer = setTimeout(function() {
+                $.getJSON("{% url 'buscar-alumnos' %}", {q: q}, function(resp) {
+                    var $lista = $('#sugerencias').empty();
+                    resp.resultados.forEach(function(r) {
+                        $('<li>').append($('<button type="button">')
+                            .append($('<span class="u-avatar">').text(r.iniciales))
+                            .append($('<span>').append($('<b>').text(r.nombre)).append($('<small>').text(r.grupos || 'Sin grupo')))
+                            .on('click', function() { miembro(r.id, 'agregar'); }))
+                            .appendTo($lista);
+                    });
+                    if (!resp.resultados.length) $lista.append($('<li class="u-sugerencias__vacio">').text('No se encontró a nadie con ese nombre.'));
+                    $lista.attr('hidden', false);
+                });
+            }, 250);
+        });
+    });
+</script>
+{% endblock ScriptBlock %}

@@ -1,0 +1,475 @@
+{% extends "posApp/base.html" %}
+{% load humanize static %}
+{% block pageContent %}
+<div class="u-page u-rm">
+    <header class="u-head">
+        <div>
+            <h1 class="u-title">Reporte de {{ mes_nombre }} {{ inicio.year }}</h1>
+            <p class="u-subtitle">
+                {{ sucursal.nombre }}{% if en_curso %}, con datos al {{ corte|date:"j \d\e F"|lower }}{% endif %}
+            </p>
+        </div>
+        <form method="GET" class="u-rm__mes" id="elegir-mes">
+            <a class="u-btn u-btn--ghost u-btn--icon" href="{{ mes_anterior_url }}" title="Mes anterior" aria-label="Mes anterior">
+                <span class="material-symbols-rounded" aria-hidden="true">chevron_left</span>
+            </a>
+            <select name="mes" class="u-input" aria-label="Mes del reporte" onchange="this.form.submit()">
+                {% for m in opciones_mes %}
+                <option value="{{ m.valor }}"{% if m.valor == mes_valor %} selected{% endif %}>{{ m.nombre }}</option>
+                {% endfor %}
+            </select>
+            {% if mes_siguiente_url %}
+            <a class="u-btn u-btn--ghost u-btn--icon" href="{{ mes_siguiente_url }}" title="Mes siguiente" aria-label="Mes siguiente">
+                <span class="material-symbols-rounded" aria-hidden="true">chevron_right</span>
+            </a>
+            {% else %}
+            <span class="u-btn u-btn--ghost u-btn--icon is-disabled" aria-hidden="true">
+                <span class="material-symbols-rounded">chevron_right</span>
+            </span>
+            {% endif %}
+            <label class="u-rm__vs">
+                <span>Comparar con</span>
+                <select name="vs" class="u-input" onchange="this.form.submit()">
+                    <option value="">Mes anterior ({{ mes_previo_nombre }})</option>
+                    {% for m in opciones_mes %}{% if m.valor != mes_valor %}
+                    <option value="{{ m.valor }}"{% if m.valor == vs_valor %} selected{% endif %}>{{ m.nombre }}</option>
+                    {% endif %}{% endfor %}
+                </select>
+            </label>
+            <button type="button" class="u-btn u-btn--ghost" data-guia-abrir aria-label="¿Cómo funciona?">
+                <span class="material-symbols-rounded" aria-hidden="true">help</span><span class="u-rm__mes-texto">¿Cómo funciona?</span>
+            </button>
+            <a class="u-btn u-btn--primary" href="{% url 'reporte-mensual-excel' %}?mes={{ mes_valor }}{% if vs_valor %}&vs={{ vs_valor }}{% endif %}" aria-label="Descargar Excel">
+                <span class="material-symbols-rounded" aria-hidden="true">download</span><span class="u-rm__mes-texto">Descargar Excel</span>
+            </a>
+            <noscript><button type="submit" class="u-btn u-btn--primary">Ver</button></noscript>
+        </form>
+    </header>
+
+    {# Carriles: lo que va del mes contra el mes pasado al mismo día #}
+    <section class="u-panel u-carriles" aria-labelledby="ritmo-titulo">
+        <div class="u-carriles__texto">
+            <h2 class="u-seccion__titulo" id="ritmo-titulo">
+                {% if en_curso %}Cómo vas contra {{ mes_ant_nombre }}{% else %}{{ mes_nombre|capfirst }} contra {{ mes_ant_nombre }}{% endif %}
+            </h2>
+            <p class="u-carriles__frase">
+                {% if al_corte_ant %}
+                {% if diferencia_ritmo >= 0 %}Vas <b class="bien">${{ diferencia_ritmo_abs|floatformat:0|intcomma }} arriba</b>{% else %}Vas <b class="mal">${{ diferencia_ritmo_abs|floatformat:0|intcomma }} abajo</b>{% endif %}
+                de lo que llevaba {{ mes_ant_nombre }} al día {{ corte_ant.day }}{% if cambio_ritmo is not None %} ({% if cambio_ritmo > 0 %}+{% endif %}{{ cambio_ritmo }}%){% endif %}.
+                {% else %}
+                No hay ventas de {{ mes_ant_nombre }} para comparar.
+                {% endif %}
+            </p>
+        </div>
+        <div class="u-carriles__pista" role="img"
+             aria-label="Al día {{ corte.day }}: {{ mes_nombre }} ${{ al_corte|floatformat:0|intcomma }}, {{ mes_ant_nombre }} ${{ al_corte_ant|floatformat:0|intcomma }}">
+            <div class="u-carril u-carril--actual">
+                <span class="u-carril__nombre">{{ mes_nombre|capfirst }}</span>
+                <div class="u-carril__agua"><span class="u-carril__nado" style="--avance: {{ carril }}%"></span></div>
+                <b class="u-carril__cifra">${{ al_corte|floatformat:0|intcomma }}</b>
+            </div>
+            <div class="u-carril u-carril--anterior">
+                <span class="u-carril__nombre">{{ mes_ant_nombre|capfirst }}</span>
+                <div class="u-carril__agua"><span class="u-carril__nado" style="--avance: {{ carril_ant }}%"></span></div>
+                <b class="u-carril__cifra">${{ al_corte_ant|floatformat:0|intcomma }}</b>
+            </div>
+        </div>
+        <dl class="u-carriles__extras">
+            {% if proyeccion %}
+            <div><dt>Si sigue este ritmo, cierras en</dt><dd>${{ proyeccion|floatformat:0|intcomma }}</dd></div>
+            {% endif %}
+            {% if not en_curso and ingresos_ant %}
+            <div><dt>{{ mes_ant_nombre|capfirst }} completo</dt><dd>${{ ingresos_ant|floatformat:0|intcomma }}</dd></div>
+            {% endif %}
+            {% if mejor_dia %}
+            <div><dt>Mejor día</dt><dd>{{ mejor_dia.fecha|date:"l j"|capfirst }}, ${{ mejor_dia.total|floatformat:0|intcomma }}</dd></div>
+            {% endif %}
+            <div><dt>Días con ventas</dt><dd>{{ dias_con_ventas }} de {{ corte.day }}</dd></div>
+        </dl>
+    </section>
+
+    <section class="u-rm__kpis" aria-label="Resumen del mes">
+        <div class="u-panel u-dato">
+            <h2 class="u-dato__titulo">Ingresos</h2>
+            <p class="u-dato__cifra">${{ ingresos|floatformat:0|intcomma }}</p>
+            {% include "posApp/_cambio.html" with valor=cambios.ingresos contra=contra %}
+            <p class="u-dato__nota">{{ numero_ventas|intcomma }} venta{{ numero_ventas|pluralize }}</p>
+        </div>
+        <div class="u-panel u-dato">
+            <h2 class="u-dato__titulo">Salidas</h2>
+            <p class="u-dato__cifra{% if total_salidas %} u-dato__cifra--salida{% endif %}">{% if total_salidas %}−{% endif %}${{ total_salidas|floatformat:0|intcomma }}</p>
+            {% include "posApp/_cambio.html" with valor=cambios.salidas contra=contra inverso=True %}
+            <p class="u-dato__nota">{{ salidas|length }} registrada{{ salidas|length|pluralize }}</p>
+        </div>
+        <div class="u-panel u-dato u-dato--neto{% if utilidad < 0 %} negativo{% endif %}">
+            <h2 class="u-dato__titulo">Utilidad</h2>
+            <p class="u-dato__cifra">{% if utilidad < 0 %}−{% endif %}${{ utilidad_abs|floatformat:0|intcomma }}</p>
+            {% include "posApp/_cambio.html" with valor=cambios.utilidad contra=contra %}
+            <p class="u-dato__nota">{% if margen is not None %}Te quedas con {{ margen }}% de lo que entra{% else %}Ingresos menos salidas{% endif %}</p>
+        </div>
+        <div class="u-panel u-dato">
+            <h2 class="u-dato__titulo">Ticket promedio</h2>
+            <p class="u-dato__cifra">${{ ticket|floatformat:0|intcomma }}</p>
+            {% include "posApp/_cambio.html" with valor=cambios.ticket contra=contra %}
+            <p class="u-dato__nota">{{ clientes_distintos }} cliente{{ clientes_distintos|pluralize }} compraron</p>
+        </div>
+        <div class="u-panel u-dato">
+            <h2 class="u-dato__titulo">Alumnos que pagaron</h2>
+            <p class="u-dato__cifra">{{ alumnos_pagaron }}</p>
+            {% include "posApp/_cambio.html" with valor=cambios.alumnos contra=contra %}
+            <p class="u-dato__nota">Clases: {{ porcentaje_clases }}% de los ingresos</p>
+        </div>
+    </section>
+
+    <div class="u-rm__fila">
+        <section class="u-panel u-seccion u-rm__grafica u-rm__ancha" aria-labelledby="dias-titulo">
+            <header class="u-rm__cabeza">
+                <h2 class="u-seccion__titulo" id="dias-titulo">Día por día</h2>
+                <div class="u-chips" role="tablist" aria-label="Tipo de gráfica">
+                    <button type="button" class="u-chip is-active" data-vista="diario" role="tab" aria-selected="true">Ingresos y salidas</button>
+                    <button type="button" class="u-chip" data-vista="acumulado" role="tab" aria-selected="false">Acumulado vs {{ mes_ant_nombre }}</button>
+                </div>
+            </header>
+            <div class="u-rm__lienzo"><canvas id="grafica-dias" aria-label="Ingresos por día de {{ mes_nombre }}"></canvas></div>
+        </section>
+
+        <section class="u-panel u-seccion" aria-labelledby="formas-titulo">
+            <h2 class="u-seccion__titulo" id="formas-titulo">Cómo pagaron</h2>
+            {% if formas %}
+            <div class="u-rm__dona"><canvas id="grafica-formas" aria-label="Ingresos por forma de pago"></canvas></div>
+            <ul class="u-rm__leyenda">
+                {% for f in formas %}
+                <li>
+                    <span class="u-rm__punto" data-i="{{ forloop.counter0 }}"></span>
+                    <span class="u-rm__leyenda-nombre">{{ f.forma }}<small>{{ f.ventas }} venta{{ f.ventas|pluralize }}</small></span>
+                    <b>${{ f.total|floatformat:0|intcomma }}</b>
+                    <span class="u-rm__pct">{{ f.porcentaje }}%</span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="u-vacio">Sin ventas este mes.</p>
+            {% endif %}
+        </section>
+    </div>
+
+    <section class="u-panel u-seccion u-rm__alumnos" aria-labelledby="alumnos-titulo">
+        <header class="u-rm__cabeza">
+            <h2 class="u-seccion__titulo" id="alumnos-titulo">Alumnos</h2>
+            <span class="u-rm__enlaces">
+                <a class="u-rm__enlace" href="{% url 'comparar-meses' %}?b={{ mes_valor }}{% if vs_valor %}&a={{ vs_valor }}{% endif %}">Ver quién regresó</a>
+                <a class="u-rm__enlace" href="{% url 'reporte-asistencia' %}">Ver asistencia</a>
+            </span>
+        </header>
+        <div class="u-rm__alumnos-cuerpo">
+            <dl class="u-rm__cifras">
+                <div><dt>Pagaron clases</dt><dd>{{ alumnos_pagaron }}</dd><span>{{ alumnos_pagaron_ant }} en {{ mes_ant_nombre }}</span></div>
+                <div><dt>{% if vs_elegido %}Regresaron{% else %}Renovaron{% endif %}</dt><dd>{% if renovacion is not None %}{{ renovacion }}%{% else %}—{% endif %}</dd><span>De los que pagaron en {{ mes_ant_nombre }}</span></div>
+                <div><dt>Ingreso por clases</dt><dd>${{ ingresos_clases|floatformat:0|intcomma }}</dd><span>{{ porcentaje_clases }}% del mes</span></div>
+                <div><dt>Asistencias</dt><dd>{{ asistencia.registros|intcomma }}</dd><span>{{ asistencia.alumnos }} alumno{{ asistencia.alumnos|pluralize }} distintos</span></div>
+                {% if alumnos_pagaron %}
+                <div class="u-rm__composicion">
+                    <dt>¿De dónde vienen los alumnos de {{ mes_nombre }}?</dt>
+                    <span>Siempre contra el mes inmediato anterior ({{ mes_previo_nombre }}), sin importar con qué mes compares arriba.</span>
+                    <div class="u-rm__tipos" role="img" aria-label="{{ composicion.nuevo }} nuevos, {{ composicion.sigue }} siguen, {{ composicion.regreso }} volvieron después de faltar">
+                        <span class="t-nuevo" style="flex-grow: {{ composicion.nuevo }}"></span>
+                        <span class="t-sigue" style="flex-grow: {{ composicion.sigue }}"></span>
+                        <span class="t-regreso" style="flex-grow: {{ composicion.regreso }}"></span>
+                    </div>
+                    <ul class="u-rm__tipos-leyenda">
+                        <li><i class="t-nuevo"></i><b>{{ composicion.nuevo }}</b> nuevos <small>{{ composicion_pct.nuevo }}%</small></li>
+                        <li><i class="t-sigue"></i><b>{{ composicion.sigue }}</b> siguen de {{ mes_previo_nombre }} <small>{{ composicion_pct.sigue }}%</small></li>
+                        <li><i class="t-regreso"></i><b>{{ composicion.regreso }}</b> volvieron después de faltar <small>{{ composicion_pct.regreso }}%</small></li>
+                    </ul>
+                </div>
+                {% endif %}
+            </dl>
+            <div class="u-rm__pendientes">
+                {% if nuevos_lista %}
+                <details class="u-rm__nuevos">
+                    <summary><span class="u-rm__subtitulo">Alumnos nuevos de {{ mes_nombre }} <span class="u-pill u-pill--ok">{{ nuevos_lista|length }}</span></span></summary>
+                    <ul class="u-rm__lista u-rm__lista--nuevos">
+                        {% for a in nuevos_lista %}<li><a href="{% url 'cliente-ficha' a.id %}">{{ a.nombre }}</a><span>{{ a.horario }}</span></li>{% endfor %}
+                    </ul>
+                </details>
+                {% endif %}
+                <h3 class="u-rm__subtitulo">
+                    {% if en_curso %}Pagaron en {{ mes_ant_nombre }} y ya se les venció{% else %}Pagaron en {{ mes_ant_nombre }} y no renovaron{% endif %}
+                    <span class="u-pill">{{ sin_renovar_total }}</span>
+                </h3>
+                {% if sin_renovar %}
+                <ul class="u-rm__lista">
+                    {% for a in sin_renovar %}
+                    <li>
+                        <a href="{% url 'cliente-ficha' a.id %}">{{ a.nombre }}</a>
+                        <span>{% if a.vence %}Venció el {{ a.vence|date:"j M"|lower }}{% elif a.proximo %}Vencía el {{ a.proximo|date:"j M"|lower }}{% else %}Último pago {{ a.ultimo|date:"j M"|lower }}{% endif %}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% if sin_renovar_total > sin_renovar|length %}
+                <a class="u-rm__enlace" href="{% url 'client-page' %}?estado=Vencido">Ver los {{ sin_renovar_total }} en Clientes</a>
+                {% endif %}
+                {% else %}
+                <p class="u-vacio">Todos los que pagaron en {{ mes_ant_nombre }} ya renovaron o siguen al corriente.</p>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+
+    <div class="u-rm__fila">
+        <section class="u-panel u-seccion u-rm__ancha" aria-labelledby="productos-titulo">
+            <h2 class="u-seccion__titulo" id="productos-titulo">Lo que más se vendió</h2>
+            {% if productos %}
+            <ol class="u-rm__ranking">
+                {% for p in productos %}
+                <li>
+                    <div class="u-rm__ranking-fila">
+                        <span class="u-rm__ranking-nombre">{{ p.nombre }}</span>
+                        <b>${{ p.total|floatformat:0|intcomma }}</b>
+                    </div>
+                    <div class="u-rm__barra"><span style="width: {{ p.ancho }}%"></span></div>
+                    <small>{{ p.cantidad|floatformat:0|intcomma }} vendido{{ p.cantidad|pluralize }}</small>
+                </li>
+                {% endfor %}
+            </ol>
+            {% else %}
+            <p class="u-vacio">Sin ventas este mes.</p>
+            {% endif %}
+        </section>
+
+        <section class="u-panel u-seccion" aria-labelledby="categorias-titulo">
+            <h2 class="u-seccion__titulo" id="categorias-titulo">Por categoría</h2>
+            {% if categorias %}
+            <div class="u-rm__apilada" aria-hidden="true">
+                {% for c in categorias %}<span data-i="{{ forloop.counter0 }}" style="flex-grow: {{ c.porcentaje|default:1 }}" title="{{ c.nombre }} {{ c.porcentaje }}%"></span>{% endfor %}
+            </div>
+            <ul class="u-rm__leyenda">
+                {% for c in categorias %}
+                <li>
+                    <span class="u-rm__punto" data-i="{{ forloop.counter0 }}"></span>
+                    <span class="u-rm__leyenda-nombre">{{ c.nombre }}</span>
+                    <b>${{ c.total|floatformat:0|intcomma }}</b>
+                    <span class="u-rm__pct">{{ c.porcentaje }}%</span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="u-vacio">Sin ventas este mes.</p>
+            {% endif %}
+
+            {% if cajeros %}
+            <h3 class="u-rm__subtitulo u-rm__subtitulo--separado">Quién cobró</h3>
+            <ul class="u-rm__cajeros">
+                {% for c in cajeros %}
+                <li><span>{{ c.nombre }}</span><small>{{ c.ventas }} venta{{ c.ventas|pluralize }}</small><b>${{ c.total|floatformat:0|intcomma }}</b></li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </section>
+    </div>
+
+    {% if mapa %}
+    <section class="u-panel u-seccion" aria-labelledby="mapa-titulo">
+        <header class="u-rm__cabeza">
+            <h2 class="u-seccion__titulo" id="mapa-titulo">Cuándo se cobra</h2>
+            <span class="u-rm__escala" aria-hidden="true">Menos <i data-n="0"></i><i data-n="1"></i><i data-n="2"></i><i data-n="3"></i><i data-n="4"></i> Más</span>
+        </header>
+        <div class="u-rm__mapa-scroll">
+            <table class="u-rm__mapa">
+                <caption class="visually-hidden">Ingresos por día de la semana y hora</caption>
+                <thead>
+                    <tr><th scope="col"><span class="visually-hidden">Día</span></th>{% for h in horas %}<th scope="col">{{ h }}</th>{% endfor %}</tr>
+                </thead>
+                <tbody>
+                    {% for fila in mapa %}
+                    <tr>
+                        <th scope="row">{{ fila.dia }}</th>
+                        {% for c in fila.celdas %}
+                        <td data-n="{{ c.nivel }}" title="{{ fila.dia }} {{ c.hora }}:00 · {{ c.numero }} venta{{ c.numero|pluralize }} · ${{ c.total|floatformat:0|intcomma }}"><span class="visually-hidden">{% if c.numero %}{{ c.numero }} ventas, ${{ c.total|floatformat:0 }}{% else %}Sin ventas{% endif %}</span></td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <p class="u-dato__nota">Horas en formato de 24 h. Pasa el dedo o el mouse sobre un cuadro para ver cuánto se cobró.</p>
+    </section>
+    {% endif %}
+
+    <section class="u-panel u-seccion u-rm__salidas" aria-labelledby="salidas-titulo">
+        <header class="u-rm__cabeza">
+            <h2 class="u-seccion__titulo" id="salidas-titulo">Salidas de {{ mes_nombre }}</h2>
+            <a class="u-btn u-btn--ghost" href="{% url 'add_salida' %}">
+                <span class="material-symbols-rounded" aria-hidden="true">add</span>Registrar salida
+            </a>
+        </header>
+        {% if salidas_conceptos %}
+        <div class="u-rm__salidas-cuerpo">
+            <ol class="u-rm__ranking u-rm__ranking--salidas">
+                {% for s in salidas_conceptos %}
+                <li>
+                    <div class="u-rm__ranking-fila">
+                        <span class="u-rm__ranking-nombre">{{ s.concepto }}</span>
+                        <b>−${{ s.total|floatformat:0|intcomma }}</b>
+                    </div>
+                    <div class="u-rm__barra"><span style="width: {{ s.ancho }}%"></span></div>
+                    {% if s.numero > 1 %}<small>{{ s.numero }} veces</small>{% endif %}
+                </li>
+                {% endfor %}
+            </ol>
+            <ul class="u-rm__movs">
+                {% for s in salidas %}
+                <li>
+                    <span class="u-rm__movs-fecha">{{ s.fecha|date:"j M"|lower }}</span>
+                    <span class="u-rm__movs-concepto">{{ s.concepto|default:"Sin concepto" }}{% if s.comentario %}<small>{{ s.comentario }}</small>{% endif %}</span>
+                    <b>−${{ s.monto|floatformat:2|intcomma }}</b>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% else %}
+        <p class="u-vacio">No hay salidas registradas en {{ mes_nombre }}. Registra los gastos (renta, sueldos, cloro, mantenimiento) para que la utilidad sea real.</p>
+        {% endif %}
+    </section>
+
+    <section class="u-panel u-seccion u-rm__grafica" aria-labelledby="doce-titulo">
+        <h2 class="u-seccion__titulo" id="doce-titulo">Mes por mes</h2>
+        <div class="u-rm__lienzo u-rm__lienzo--bajo"><canvas id="grafica-doce" aria-label="Ingresos, salidas y utilidad de los últimos 12 meses"></canvas></div>
+        <p class="u-dato__nota">Toca una barra para abrir el reporte de ese mes.</p>
+    </section>
+</div>
+{{ grafica|json_script:"datos-grafica" }}
+<div class="u-guia" data-guia role="dialog" aria-modal="true" aria-labelledby="guia-titulo">
+    <div class="u-guia__caja">
+        <section class="u-guia__paso activo">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/reporte_mensual_1.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2 id="guia-titulo">1. Cómo va el mes</h2>
+            <p>Elige el mes y con cuál compararlo. El recuadro azul te dice si vas arriba o abajo de lo que llevaba el otro mes al mismo día.</p>
+            <p>Abajo están ingresos, salidas, utilidad, ticket promedio y alumnos que pagaron.</p>
+        </section>
+        <section class="u-guia__paso">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/reporte_mensual_2.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2>2. Día por día y alumnos</h2>
+            <p>La gráfica muestra lo que entró y salió cada día, y cómo pagaron.</p>
+            <p>En Alumnos ves cuántos pagaron, cuántos regresaron, los nuevos y quiénes no renovaron.</p>
+        </section>
+        <section class="u-guia__paso">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/reporte_mensual_3.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2>3. Ventas, salidas y Excel</h2>
+            <p>Más abajo: lo que más se vendió, a qué horas se cobra más, las salidas del mes y los últimos doce meses.</p>
+            <p>Con «Descargar Excel» te llevas todo el reporte.</p>
+        </section>
+    </div>
+</div>
+{% include "posApp/_guia_pasos.html" %}
+{% endblock pageContent %}
+
+{% block ScriptBlock %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+(function() {
+    var datos = JSON.parse(document.getElementById('datos-grafica').textContent);
+    var css = getComputedStyle(document.documentElement);
+    var color = function(v) { return css.getPropertyValue(v).trim(); };
+    var C = {
+        carril: color('--u-carril'), cloro: color('--u-cloro'), fosa: color('--u-fosa'), bad: color('--u-bad'),
+        linea: color('--u-linea'), tinta2: color('--u-tinta-2'), warn: color('--u-warn-solid'), ok: color('--u-ok')
+    };
+    var paleta = [C.carril, C.cloro, C.fosa, C.warn, C.ok, '#8B5CF6', '#E2412F', '#94A3B8'];
+    document.querySelectorAll('.u-rm__punto, .u-rm__apilada span').forEach(function(el) {
+        el.style.background = paleta[el.dataset.i % paleta.length];
+    });
+    if (!window.Chart) return;
+
+    var pesos = new Intl.NumberFormat('es-MX', {style: 'currency', currency: 'MXN', maximumFractionDigits: 0});
+    var corto = function(v) {
+        var a = Math.abs(v);
+        return (v < 0 ? '−' : '') + '$' + (a >= 1000 ? (a / 1000).toLocaleString('es-MX', {maximumFractionDigits: 1}) + 'k' : a);
+    };
+    Chart.defaults.font.family = css.getPropertyValue('--u-text');
+    Chart.defaults.font.size = 13;
+    Chart.defaults.color = C.tinta2;
+    Chart.defaults.plugins.tooltip.backgroundColor = C.fosa;
+    Chart.defaults.plugins.tooltip.padding = 10;
+    Chart.defaults.plugins.tooltip.callbacks.label = function(ctx) {
+        return ' ' + ctx.dataset.label + ': ' + pesos.format(Math.abs(ctx.parsed.y ?? ctx.parsed));
+    };
+    var ejes = function(extra) {
+        return Object.assign({
+            x: {grid: {display: false}, border: {display: false}},
+            y: {grid: {color: C.linea}, border: {display: false}, ticks: {callback: corto, maxTicksLimit: 6}}
+        }, extra || {});
+    };
+    var reducido = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reducido) Chart.defaults.animation = false;
+
+    // ---- Día por día ----
+    var lienzoDias = document.getElementById('grafica-dias');
+    var vistas = {
+        diario: {
+            type: 'bar',
+            data: {labels: datos.dias, datasets: [
+                {label: 'Ingresos', data: datos.ingresos, backgroundColor: C.carril, borderRadius: 4, stack: 'd'},
+                {label: 'Salidas', data: datos.salidas, backgroundColor: C.bad, borderRadius: 4, stack: 'd'}
+            ]},
+            options: {maintainAspectRatio: false, interaction: {mode: 'index', intersect: false},
+                plugins: {legend: {display: false}, tooltip: {callbacks: {title: function(i) { return i[0].label + ' de ' + datos.mes; }}}},
+                scales: ejes({x: {stacked: true, grid: {display: false}, border: {display: false}}, y: {stacked: true, grid: {color: C.linea}, border: {display: false}, ticks: {callback: corto, maxTicksLimit: 6}}})}
+        },
+        acumulado: {
+            type: 'line',
+            data: {labels: datos.dias, datasets: [
+                {label: datos.mes.charAt(0).toUpperCase() + datos.mes.slice(1), data: datos.acumulado, borderColor: C.carril,
+                 backgroundColor: 'rgba(22,104,199,.12)', fill: true, tension: .25, pointRadius: 0, borderWidth: 3},
+                {label: datos.mes_ant.charAt(0).toUpperCase() + datos.mes_ant.slice(1), data: datos.acumulado_ant, borderColor: C.tinta2,
+                 borderDash: [6, 5], fill: false, tension: .25, pointRadius: 0, borderWidth: 2}
+            ]},
+            options: {maintainAspectRatio: false, interaction: {mode: 'index', intersect: false},
+                plugins: {legend: {position: 'bottom', labels: {usePointStyle: true, boxHeight: 8}},
+                    tooltip: {callbacks: {title: function(i) { return 'Al día ' + i[0].label; }}}},
+                scales: ejes()}
+        }
+    };
+    var graficaDias = new Chart(lienzoDias, vistas.diario);
+    document.querySelectorAll('[data-vista]').forEach(function(boton) {
+        boton.addEventListener('click', function() {
+            document.querySelectorAll('[data-vista]').forEach(function(b) {
+                b.classList.toggle('is-active', b === boton);
+                b.setAttribute('aria-selected', b === boton);
+            });
+            graficaDias.destroy();
+            graficaDias = new Chart(lienzoDias, vistas[boton.dataset.vista]);
+        });
+    });
+
+    // ---- Formas de pago ----
+    var lienzoFormas = document.getElementById('grafica-formas');
+    if (lienzoFormas) {
+        new Chart(lienzoFormas, {
+            type: 'doughnut',
+            data: {labels: datos.formas.etiquetas, datasets: [{label: 'Cobrado', data: datos.formas.valores,
+                backgroundColor: paleta, borderColor: '#fff', borderWidth: 3}]},
+            options: {maintainAspectRatio: false, cutout: '68%', plugins: {legend: {display: false},
+                tooltip: {callbacks: {label: function(ctx) { return ' ' + pesos.format(ctx.parsed); }}}}}
+        });
+    }
+
+    // ---- Últimos 12 meses ----
+    var doce = datos.doce;
+    new Chart(document.getElementById('grafica-doce'), {
+        data: {labels: doce.etiquetas, datasets: [
+            {type: 'line', label: 'Utilidad', data: doce.utilidad, borderColor: C.fosa, backgroundColor: C.fosa,
+             tension: 0, pointRadius: 3, borderWidth: 2, order: 0},
+            {type: 'bar', label: 'Ingresos', data: doce.ingresos, backgroundColor: doce.ingresos.map(function(_, i) {
+                return i === doce.ingresos.length - 1 ? C.carril : 'rgba(22,104,199,.35)'; }), borderRadius: 4, order: 1},
+            {type: 'bar', label: 'Salidas', data: doce.salidas, backgroundColor: 'rgba(207,52,38,.55)', borderRadius: 4, order: 1}
+        ]},
+        options: {maintainAspectRatio: false, interaction: {mode: 'index', intersect: false},
+            plugins: {legend: {position: 'bottom', labels: {usePointStyle: true, boxHeight: 8}}},
+            scales: ejes(),
+            onHover: function(e, el) { e.native.target.style.cursor = el.length ? 'pointer' : 'default'; },
+            onClick: function(e, el) { if (el.length) window.location.search = doce.urls[el[0].index].slice(1); }}
+    });
+})();
+</script>
+{% endblock ScriptBlock %}

@@ -1,214 +1,103 @@
-{%load static%}
+{% load static %}
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    {% if page_title %}
-    <title>{{ page_title }} | URIOSTE</title>
-    {% else %}
-    <title>URIOSTE</title>
-    {% endif %}
-    <link rel="stylesheet" href="{% static 'posAPP/assets/default/css/style.css' %}">
-    <link rel="stylesheet" href="{% static 'posAPP/assets/bootstrap/css/bootstrap.min.css' %}">
-    <link rel="stylesheet" href="{% static 'posAPP/assets/material-admin/vendors/mdi/css/materialdesignicons.min.css' %}">
-    <link rel="stylesheet" href="{% static 'posAPP/assets/material-admin/vendors/css/vendor.bundle.base.css' %}">
-    <link rel="stylesheet" href="{% static 'posAPP/assets/material-admin/vendors/flag-icon-css/css/flag-icon.min.css' %}">
-    <link rel="stylesheet" href="{% static 'posAPP/assets/material-admin/vendors/jvectormap/jquery-jvectormap.css' %}">
-    <link rel="stylesheet" href="{% static 'posAPP/assets/material-admin/css/demo/style.css' %}">
-    <link rel="shortcut icon" href="{% static 'posApp/assets/material-admin/images/favicon.png' %}" />
+    <title>Inicia sesión | Acuática Urioste</title>
+    <link rel="shortcut icon" href="{% static 'posApp/assets/material-admin/images/favicon.png' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'posAPP/assets/default/css/urioste.css' %}?v=20261014n">
     <script src="{% static 'posAPP/assets/default/js/jquery-3.6.0.min.js' %}"></script>
-    <script src="{% static 'posAPP/assets/bootstrap/js/bootstrap.min.js' %}"></script>
-    <script src="{% static 'posAPP/assets/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
-    <script src="{% static 'posAPP/assets/bootstrap/js/popper.min.js' %}"></script>
-    <style>
-        body {
-            background: linear-gradient(135deg, #72edf2 10%, #5151e5 100%);
-            background-size: cover;
-            background-position: center;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            font-family: 'Arial', sans-serif;
-            position: relative;
-        }
-
-        .background-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: url("https://i.ibb.co/3MnRn8b/aquapolis.jpg" ) no-repeat center;
-            background-size: cover;
-            opacity: 0.5;
-            z-index: 1;
-        }
-
-        .container {
-            position: relative;
-            z-index: 2;
-        }
-
-        .card {
-            border-radius: 15px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            padding: 20px;
-            background-color: white;
-        }
-
-        .card-title {
-            font-size: 24px;
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 20px;
-        }
-
-        .form-label {
-            font-size: 14px;
-            font-weight: bold;
-            color: #555;
-        }
-
-        .btn-primary {
-            background-color: #007bff;
-            border: none;
-            font-size: 16px;
-            padding: 10px;
-            border-radius: 5px;
-            transition: background-color 0.3s ease;
-        }
-
-        .btn-primary:hover {
-            background-color: #0056b3;
-        }
-
-        .form-control {
-            border-radius: 5px;
-            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
-            transition: box-shadow 0.3s ease;
-        }
-
-        .form-control:focus {
-            box-shadow: 0 0 5px rgba(81, 81, 229, 0.5);
-        }
-
-        .form-icon {
-            position: absolute;
-            left: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #aaa;
-        }
-
-        .form-group {
-            position: relative;
-        }
-
-        .form-control {
-            padding-left: 40px;
-        }
-    </style>
 </head>
-
-<body>
-    <div class="background-overlay"></div>
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-body">
-                        <h3 class="card-title text-center">Inicia sesión</h3>
-                        <form id="login-user" method="POST" action="{% url 'login-user' %}">
-                            {% csrf_token %}
-                            <div class="mb-3 form-group">
-                                
-                                <label for="username" class="form-label">Usuario</label>
-                                <input type="text" class="form-control" id="username" name="username" required>
-                            </div>
-                            <div class="mb-3 form-group">
-                                
-                                <label for="password" class="form-label">Contraseña</label>
-                                <input type="password" class="form-control" id="password" name="password" required>
-                            </div>
-                            <button type="submit" class="btn btn-primary w-100">Login</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
+<body class="u-login">
+    <section class="u-login__foto" style="--foto: url('{% static 'posAPP/assets/default/img/alberca-urioste.webp' %}')">
+        <div class="u-login__frase">
+            <p class="u-login__marca">Acuática Urioste</p>
+            <p class="u-login__lema">El equipo te espera, sé parte de la familia.</p>
         </div>
-    </div>
+    </section>
+
+    <main class="u-login__panel">
+        <div class="u-login__caja">
+            <img class="u-login__logo" src="https://static.wixstatic.com/media/7dbb81_b3104a39f3ed47ae8c62b057b5437929~mv2.png/v1/fill/w_411,h_411,al_c,q_85,usm_0.66_1.00_0.01,enc_auto/313400177_487585436739361_7975272688749260606_n.png" alt="Acuática Urioste">
+            <h1 class="u-login__titulo">Inicia sesión</h1>
+            <p class="u-login__texto">Entra con tu usuario de recepción o de gerencia.</p>
+
+            <form id="login-user" method="POST" action="{% url 'login-user' %}" novalidate>
+                {% csrf_token %}
+                <div class="u-login__error" id="login-error" role="alert" hidden></div>
+                <label class="u-login__campo">
+                    <span>Usuario</span>
+                    <span class="u-login__input">
+                        <span class="material-symbols-rounded" aria-hidden="true">person</span>
+                        <input type="text" id="username" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required autofocus>
+                    </span>
+                </label>
+                <label class="u-login__campo">
+                    <span>Contraseña</span>
+                    <span class="u-login__input">
+                        <span class="material-symbols-rounded" aria-hidden="true">lock</span>
+                        <input type="password" id="password" name="password" autocomplete="current-password" required>
+                        <button type="button" class="u-login__ver" id="ver-password" aria-label="Mostrar contraseña" aria-pressed="false">
+                            <span class="material-symbols-rounded" aria-hidden="true">visibility</span>
+                        </button>
+                    </span>
+                </label>
+                <button type="submit" class="u-login__entrar" id="entrar">
+                    <span class="u-login__entrar-texto">Entrar</span>
+                </button>
+            </form>
+        </div>
+    </main>
+
     <script>
-        function start_loader() {
-            $('body').append('<div id="preloader"><div class="loader"></div></div>');
-        }
-
-        function end_loader() {
-            $('#preloader').remove();
-        }
-
-        function alert_toast(message, type) {
-            var alertBox = $('<div>').addClass('alert alert-' + type + ' err-msg').text(message).hide();
-            $('body').prepend(alertBox);
-            alertBox.show('slow');
-        }
-
         $(function () {
-            $('#login-user').submit(function (e) {
+            var $form = $('#login-user'), $error = $('#login-error'), $boton = $('#entrar');
+
+            $('#ver-password').on('click', function () {
+                var $pass = $('#password'), visible = $pass.attr('type') === 'text';
+                $pass.attr('type', visible ? 'password' : 'text');
+                $(this).attr({'aria-pressed': String(!visible), 'aria-label': visible ? 'Mostrar contraseña' : 'Ocultar contraseña'})
+                       .find('.material-symbols-rounded').text(visible ? 'visibility' : 'visibility_off');
+            });
+
+            function mostrarError(texto) {
+                $error.text(texto).prop('hidden', false);
+                $boton.prop('disabled', false).removeClass('is-cargando');
+            }
+
+            $form.on('submit', function (e) {
                 e.preventDefault();
-                var _this = $(this);
-                $('.err-msg').remove();
-                var el = $('<div>').addClass("alert alert-danger err-msg").hide();
-                if (_this[0].checkValidity() == false) {
-                    _this[0].reportValidity();
-                    return false;
+                if (!$('#username').val().trim() || !$('#password').val()) {
+                    return mostrarError('Escribe tu usuario y tu contraseña.');
                 }
-                start_loader();
+                $error.prop('hidden', true);
+                $boton.prop('disabled', true).addClass('is-cargando');
                 $.ajax({
-                    headers: {
-                        "X-CSRFToken": '{{csrf_token}}'
-                    },
+                    headers: {"X-CSRFToken": '{{ csrf_token }}'},
                     url: "{% url 'login-user' %}",
-                    data: new FormData($(this)[0]),
+                    data: new FormData(this),
                     cache: false,
                     contentType: false,
                     processData: false,
                     method: 'POST',
-                    type: 'POST',
                     dataType: 'json',
-                    error: err => {
-                        console.log(err);
-                        alert_toast("An error occured", 'error');
-                        end_loader();
-                    },
+                    error: function () { mostrarError('No se pudo conectar. Revisa el internet e inténtalo otra vez.'); },
                     success: function (resp) {
-                        if (typeof resp == 'object' && resp.status == 'success') {
-                            el.removeClass("alert alert-danger err-msg");
+                        if (resp && resp.status === 'success' && resp.redirect_url) {
                             location.href = resp.redirect_url;
-                        } else if (resp.status == 'failed' && !!resp.msg) {
-                            el.text(resp.msg);
                         } else {
-                            el.text("An error occured", 'error');
-                            end_loader();
-                            console.err(resp);
+                            mostrarError((resp && resp.msg) || 'No se pudo iniciar sesión.');
+                            $('#password').val('').trigger('focus');
                         }
-                        _this.prepend(el);
-                        el.show('slow');
-                        $("html, body, .modal").scrollTop(0);
-                        end_loader();
                     }
                 });
             });
         });
     </script>
-    <script src="{% static 'posAPP/assets/material-admin/vendors/js/vendor.bundle.base.js' %}"></script>
-    <script src="{% static 'posAPP/assets/material-admin/js/material.js' %}"></script>
-    <script src="{% static 'posAPP/assets/material-admin/js/misc.js' %}"></script>
-    <script src="{% static 'posAPP/assets/material-admin/js/dashboard.js' %}"></script>
 </body>
-
 </html>

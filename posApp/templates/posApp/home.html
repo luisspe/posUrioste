@@ -1,105 +1,218 @@
-{% extends "posApp/base.html" %} {% load humanize %} {% block pageContent %}
-<style>
-    .borroso {
-        filter: blur(4px); /* Ajusta el valor de "px" según la cantidad de desenfoque deseado */
-    
-    }
-    .button-wrapper {
-        max-width: 150px; /* Ajusta el valor según tus necesidades */
-        margin: 0 auto; /* Centra el contenido horizontalmente */
-        text-align: center; /* Centra el contenido del botón */
-    }
+{% extends "posApp/base.html" %}
+{% load humanize static %}
+{% block pageContent %}
+<div class="u-page u-inicio">
+    <header class="u-inicio__head">
+        <div>
+            <p class="u-inicio__fecha">{{ hoy|date:"l j \d\e F"|lower|capfirst }}</p>
+            <h1 class="u-title">{{ saludo }}, {{ user.first_name|default:user.username }}</h1>
+            <p class="u-subtitle">{{ sucursal }}</p>
+        </div>
+    </header>
 
-    .black-button {
-    color: black;
-}
-</style>
+    <div class="u-inicio__cifras">
+        <section class="u-inicio__hoy" aria-labelledby="hoy-titulo">
+            <h2 id="hoy-titulo">Hoy</h2>
+            <p class="u-inicio__monto">${{ total_sales|floatformat:2|intcomma }}</p>
+            <p class="u-inicio__nota">
+                {{ transaction|intcomma }} venta{{ transaction|pluralize }}
+                {% if transaction %}<a href="{% url 'sales-page' %}">Ver ventas de hoy</a>{% endif %}
+            </p>
+        </section>
 
-<div class="mdc-layout-grid__cell stretch-card mdc-layout-grid__cell--span-12">
-    <hr class="w-100">
-</div>
-<div class="mdc-layout-grid__cell stretch-card mdc-layout-grid__cell--span-12">
-    <h1>{{sucursal}}</h1>
-    <h3>{{sucursal_de_manager}}</h3>
+        <section class="u-panel u-inicio__mes is-oculto" id="mes" aria-labelledby="mes-titulo">
+            <header>
+                <h2 id="mes-titulo">{{ hoy|date:"F"|capfirst }}</h2>
+                <button type="button" class="u-inicio__ojo" id="toggleSalesButton" aria-pressed="false" aria-controls="mes">
+                    <span class="material-symbols-rounded" aria-hidden="true">visibility</span>
+                    <span class="u-inicio__ojo-texto">Mostrar</span>
+                </button>
+            </header>
+            <p class="u-inicio__monto">
+                <span class="u-inicio__real">${{ month_sales|floatformat:2|intcomma }}</span>
+                <span class="u-inicio__tapado" aria-hidden="true">$ • • • • • •</span>
+            </p>
+            <dl class="u-inicio__desglose">
+                <div><dt>Efectivo</dt><dd><span class="u-inicio__real">${{ month_sales_cash|floatformat:2|intcomma }}</span><span class="u-inicio__tapado" aria-hidden="true">• • • •</span></dd></div>
+                <div><dt>Banco</dt><dd><span class="u-inicio__real">${{ month_sales_bank|floatformat:2|intcomma }}</span><span class="u-inicio__tapado" aria-hidden="true">• • • •</span></dd></div>
+            </dl>
+        </section>
+    </div>
 
-</div>
-<div class="mdc-layout-grid__cell stretch-card mdc-layout-grid__cell--span-3-desktop mdc-layout-grid__cell--span-3-tablet">
-    <div class="mdc-card info-card info-card--success">
-        <div class="card-inner">
-            <h5 class="card-title">Categorias</h5>
-            <h5 class="font-weight-light pb-2 mb-1 border-bottom">{{ categories|intcomma }}</h5>
-            <p class="tx-12 text-muted">Todas las categorias</p>
-            <div class="card-icon-wrapper">
-                <i class="material-icons">list</i>
-            </div>
+    <nav class="u-inicio__atajos" aria-label="Atajos">
+        <a href="{% url 'pos-page' %}"><span class="material-symbols-rounded" aria-hidden="true">point_of_sale</span>Cobrar</a>
+        <a href="{% url 'checkin' %}"><span class="material-symbols-rounded" aria-hidden="true">qr_code_scanner</span>Check-in QR</a>
+        <a href="{% url 'pase-lista' %}"><span class="material-symbols-rounded" aria-hidden="true">fact_check</span>Pase de lista</a>
+        <a href="{% url 'client-page' %}"><span class="material-symbols-rounded" aria-hidden="true">groups</span>Clientes</a>
+    </nav>
+
+    <section class="u-inicio__tutoriales" aria-labelledby="tutoriales-titulo">
+        <h2 id="tutoriales-titulo">¿Cómo se hace?</h2>
+        <div class="u-inicio__tutoriales-lista">
+            <button type="button" data-guia-abrir="lista">
+                <span class="material-symbols-rounded" aria-hidden="true">play_circle</span>
+                <span><b>Pasar lista</b><small>6 pasos, en Pase de lista</small></span>
+            </button>
+            <button type="button" data-guia-abrir="venta">
+                <span class="material-symbols-rounded" aria-hidden="true">play_circle</span>
+                <span><b>Registrar una venta</b><small>3 pasos, en Cobrar</small></span>
+            </button>
+            <button type="button" data-guia-abrir="mensualidad">
+                <span class="material-symbols-rounded" aria-hidden="true">play_circle</span>
+                <span><b>Cobrar una mensualidad</b><small>6 pasos, en Cobrar</small></span>
+            </button>
+            <button type="button" data-guia-abrir="estado">
+                <span class="material-symbols-rounded" aria-hidden="true">play_circle</span>
+                <span><b>Ver si un alumno va al corriente</b><small>4 pasos, en Clientes, Check-in y Reportes</small></span>
+            </button>
         </div>
+    </section>
+
+    <section class="u-inicio__catalogo" aria-label="Catálogo">
+        <a class="u-panel" href="{% url 'category-page' %}">
+            <b>{{ categories|intcomma }}</b>
+            <span>categoría{{ categories|pluralize }}</span>
+        </a>
+        <a class="u-panel" href="{% url 'product-page' %}">
+            <b>{{ products|intcomma }}</b>
+            <span>producto{{ products|pluralize }} y entradas</span>
+        </a>
+    </section>
+</div>
+<div class="u-guia" data-guia="lista" data-guia-ir="{% url 'pase-lista' %}" data-guia-ir-texto="Ir a Pase de lista" role="dialog" aria-modal="true" aria-labelledby="guia-titulo-lista">
+    <div class="u-guia__caja">
+        <section class="u-guia__paso activo">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/pase_lista_1.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2 id="guia-titulo-lista">1. Elige la clase</h2>
+            <p>Arriba salen las clases que tocan hoy, por hora. La que está por empezar o acaba de empezar dice <strong>Ahora</strong> y se abre sola.</p>
+            <p>Cada clase dice cuántos llegaron, por ejemplo <strong>2 de 8</strong>. Para pasar lista de otro día, cambia la fecha con las flechas.</p>
+        </section>
+        <section class="u-guia__paso">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/pase_lista_2.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2>2. Marca a cada alumno</h2>
+            <p>Toca <strong>Presente</strong>, <strong>Falta</strong>, <strong>Retardo</strong> o <strong>Justificada</strong>. Se guarda al tocar: no hay botón de guardar.</p>
+            <p>Si te equivocaste, toca la opción correcta y se cambia. Arriba ves cuántos llegaron y cuántos faltan por marcar.</p>
+        </section>
+        <section class="u-guia__paso">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/pase_lista_3.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2>3. Quién no va al corriente</h2>
+            <p>Los que deben tienen la orilla roja y dicen <strong>Debe X días</strong> o <strong>Sin pagos</strong>.</p>
+            <p>Al marcarlos presentes sale un aviso rojo: pásalos a recepción para que se pongan al corriente.</p>
+        </section>
+        <section class="u-guia__paso">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/pase_lista_4.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2>4. Los que pasaron su QR</h2>
+            <p>Quien pasó su credencial en el <strong>Check-in</strong> ya aparece presente en su clase, con la hora. Si llegó más de 10 minutos tarde queda con <strong>retardo</strong> y lo dice en amarillo.</p>
+            <p>Si alguien pasó el QR un día que no le toca, sale arriba en <strong>Llegaron sin clase este día</strong>.</p>
+        </section>
+        <section class="u-guia__paso">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/pase_lista_5.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2>5. Alumnos de otro grupo y notas</h2>
+            <p>Si viene alguien a reponer clase, búscalo en <strong>Agregar alumno de otro grupo</strong> y queda presente en esta clase.</p>
+            <p>Con <strong>Agregar nota</strong> anotas algo del día, por ejemplo "avisó que sale temprano". Primero marca su asistencia y luego la nota.</p>
+        </section>
+        <section class="u-guia__paso">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/pase_lista_6.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2>6. Termina la lista</h2>
+            <p><strong>Todos presentes</strong> marca presentes a los que faltan por marcar.</p>
+            <p><strong>Cerrar y marcar faltas</strong> pone falta a los que no llegaron. Antes te pregunta cuántos son para que lo confirmes.</p>
+        </section>
     </div>
 </div>
-<div class="mdc-layout-grid__cell stretch-card mdc-layout-grid__cell--span-3-desktop mdc-layout-grid__cell--span-3-tablet">
-    <div class="mdc-card info-card info-card--primary">
-        <div class="card-inner">
-            <h5 class="card-title">Productos</h5>
-            <h5 class="font-weight-light pb-2 mb-1 border-bottom">{{ products|intcomma }}</h5>
-            <p class="tx-12 text-muted">Todos los productos</p>
-            <div class="card-icon-wrapper">
-                <i class="material-icons">label</i>
-            </div>
-        </div>
+<div class="u-guia" data-guia="venta" data-guia-ir="{% url 'pos-page' %}" data-guia-ir-texto="Ir a Cobrar" role="dialog" aria-modal="true" aria-labelledby="guia-titulo-venta">
+    <div class="u-guia__caja">
+        <section class="u-guia__paso activo">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/cobrar_1.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2 id="guia-titulo-venta">1. Elige al cliente y cómo paga</h2>
+            <p>En <strong>Agrega un cliente</strong> escribe parte del nombre de quien compra y elígelo. Luego elige la forma de pago.</p>
+        </section>
+        <section class="u-guia__paso">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/venta_2.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2>2. Agrega los productos</h2>
+            <p>Escribe en <strong>Selecciona Productos</strong>, por ejemplo «gato» para Gatorade. Si lleva más de uno, cambia la <strong>Cantidad</strong> antes de tocar <strong>Agrega Articulo</strong>.</p>
+            <p>En la lista puedes cambiar la cantidad o quitar un producto con la <strong>×</strong> roja.</p>
+        </section>
+        <section class="u-guia__paso">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/venta_3.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2>3. Cobra y entrega el ticket</h2>
+            <p>Toca <strong>Cobrar</strong>, escribe cuánto te dieron en efectivo o con tarjeta y el sistema calcula el cambio. Toca <strong>Guardar</strong> y sale el ticket para imprimir.</p>
+            <p>Si es una mensualidad hay que revisar más cosas: ve la guía <strong>Cobrar una mensualidad</strong>.</p>
+        </section>
     </div>
 </div>
-<div class="mdc-layout-grid__cell stretch-card mdc-layout-grid__cell--span-3-desktop mdc-layout-grid__cell--span-3-tablet">
-    <div class="mdc-card info-card info-card--info">
-        <div class="card-inner">
-            <h5 class="card-title">Transacciones del dia</h5>
-            <h5 class="font-weight-light pb-2 mb-1 border-bottom">{{ transaction|intcomma }}</h5>
-            <p class="tx-12 text-muted">Cuenta total de transacciones del dia</p>
-            <div class="card-icon-wrapper">
-                <i class="material-icons">receipt</i>
-            </div>
-        </div>
+<div class="u-guia" data-guia="mensualidad" data-guia-ir="{% url 'pos-page' %}" data-guia-ir-texto="Ir a Cobrar" role="dialog" aria-modal="true" aria-labelledby="guia-titulo-mensualidad">
+    <div class="u-guia__caja">
+        <section class="u-guia__paso activo">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/cobrar_1.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2 id="guia-titulo-mensualidad">1. Elige al alumno y cómo paga</h2>
+            <p>En <strong>Agrega un cliente</strong> escribe parte de su nombre y elígelo. Luego elige la forma de pago.</p>
+            <p>Si llegas desde el botón <strong>Cobrar</strong> de Clientes o de su ficha, el alumno ya viene elegido.</p>
+        </section>
+        <section class="u-guia__paso">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/cobrar_2.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2>2. Elige la mensualidad de su clase</h2>
+            <p>Escribe en <strong>Selecciona Productos</strong> y fíjate bien: puede haber varias mensualidades parecidas. Elige la que corresponde a los días y la hora en que nada el alumno.</p>
+            <p>Toca <strong>Agrega Articulo</strong> y la mensualidad pasa a la lista.</p>
+        </section>
+        <section class="u-guia__paso">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/cobrar_3.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2>3. Revisa el próximo pago y el grupo</h2>
+            <p>Al agregar una mensualidad, <strong>Próximo pago</strong> se llena solo con su día de pago. Puedes cambiar la fecha si acordaron otra.</p>
+            <p>Si la mensualidad no dice el horario (como "3 CLA X SEM"), aparece <strong>Grupo</strong>: confirma que sea su clase. Al cobrar, el alumno queda inscrito en ese grupo y su horario se actualiza.</p>
+        </section>
+        <section class="u-guia__paso">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/cobrar_4.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2>4. Si no se llena el próximo pago, es otro producto</h2>
+            <p>Productos como la inscripción, gorras o comida <strong>no son mensualidad</strong>: el próximo pago se queda vacío y el alumno seguiría saliendo como que debe.</p>
+            <p>Si te pasó, quita el producto con la <strong>×</strong> roja y agrega la mensualidad correcta. Antes de cobrar, revisa que <strong>Próximo pago</strong> tenga fecha.</p>
+        </section>
+        <section class="u-guia__paso">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/cobrar_5.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2>5. Cobra</h2>
+            <p>Toca <strong>Cobrar</strong>, escribe lo que te dieron en efectivo o con tarjeta y el sistema calcula el cambio. Toca <strong>Guardar</strong>.</p>
+            <p>El ticket dice la fecha del próximo pago para que el papá o mamá la tenga.</p>
+        </section>
+        <section class="u-guia__paso">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/cobrar_6.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2>6. Ya sale al corriente</h2>
+            <p>En el pase de lista y en el check-in el alumno aparece <strong>Al corriente</strong>, con la mensualidad que pagó y su próximo pago.</p>
+            <p>Si sigue saliendo que debe, lo más probable es que se haya cobrado un producto que no es mensualidad.</p>
+        </section>
     </div>
 </div>
-<div class="mdc-layout-grid__cell stretch-card mdc-layout-grid__cell--span-3-desktop mdc-layout-grid__cell--span-3-tablet">
-    <div class="mdc-card info-card info-card--warning">
-        <div class="card-inner">
-            <h5 class="card-title">Ventas de hoy</h5>
-            <h5 class="font-weight-light pb-2 mb-1 border-bottom">$ {{ total_sales|intcomma }}</h5>
-            <p class="tx-12 text-muted">Ventas de hoy</p>
-            <div class="card-icon-wrapper">
-                <i class="mdi mdi-cash-multiple"></i>
-            </div>
-        </div>
+<div class="u-guia" data-guia="estado" data-guia-ir="{% url 'client-page' %}" data-guia-ir-texto="Ir a Clientes" role="dialog" aria-modal="true" aria-labelledby="guia-titulo-estado">
+    <div class="u-guia__caja">
+        <section class="u-guia__paso activo">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/clientes_1.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2 id="guia-titulo-estado">1. Busca al alumno</h2>
+            <p>En <strong>Clientes</strong> escribe parte del nombre o el celular. La etiqueta de cada alumno dice si va al corriente o cuántos días debe.</p>
+        </section>
+        <section class="u-guia__paso">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/clientes_3.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2>2. Abre su ficha</h2>
+            <p>Toca su nombre. En <strong>Estado de pago</strong> ves qué mensualidad pagó, hasta cuándo le cubre y su próximo pago.</p>
+            <p>Más abajo están todos sus pagos y compras.</p>
+        </section>
+        <section class="u-guia__paso">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/checkin_2.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2>3. Al llegar, el check-in te avisa</h2>
+            <p>Si pasa su credencial y debe, sale en rojo <strong>No va al corriente</strong>. Pásalo a recepción para que pague.</p>
+        </section>
+        <section class="u-guia__paso">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/reporte_asistencia_2.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2>4. La lista de los que deben</h2>
+            <p>En <strong>Reporte de asistencia</strong>, la pestaña <strong>Vinieron y deben</strong> junta a los que vinieron con el pago vencido. Ahí ves a quién hay que cobrarle.</p>
+        </section>
     </div>
 </div>
-<div class="mdc-layout-grid__cell stretch-card mdc-layout-grid__cell--span-3-desktop mdc-layout-grid__cell--span-3-tablet">
-    <div class="mdc-card info-card info-card--warning">
-        <div class="card-inner">
-            <h5 class="card-title">Ventas del mes</h5>
-            <h5 id="monthSales" class="font-weight-light pb-2 mb-1 border-bottom borroso">$ {{ month_sales|intcomma }}</h5>
-            <p id="borro" class="tx-12 text-muted borroso">Efectivo: ${{ month_sales_cash|intcomma }}</p>
-            <p id="borroo" class="tx-12 text-muted borroso">Banco: ${{ month_sales_bank|intcomma }}</p>
-            <div class="card-icon-wrapper">
-                <i class="mdi mdi-cash-multiple"></i>
-            </div>
-            <div class="button-wrapper d-flex">
-                <div class="mdc-layout-grid__cell mdc-layout-grid__cell--span-8-desktop mdc-layout-grid__cell--span-8-tablet">
-                    <button id="toggleSalesButton" class="mdc-button mdc-button--outlined mdc-button--compact black-button">Mostrar/Ocultar</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+{% include "posApp/_guia_pasos.html" %}
 <script>
     document.getElementById("toggleSalesButton").addEventListener("click", function() {
-        var monthSales = document.getElementById("monthSales");
-        var efectivo = document.getElementById("borro");
-        var banco = document.getElementById("borroo");
-
-        monthSales.classList.toggle("borroso");
-        efectivo.classList.toggle("borroso");
-        banco.classList.toggle("borroso");
-
+        var mes = document.getElementById("mes");
+        var oculto = mes.classList.toggle("is-oculto");
+        this.setAttribute("aria-pressed", String(!oculto));
+        this.querySelector(".material-symbols-rounded").textContent = oculto ? "visibility" : "visibility_off";
+        this.querySelector(".u-inicio__ojo-texto").textContent = oculto ? "Mostrar" : "Ocultar";
     });
-   
 </script>
 {% endblock pageContent %}

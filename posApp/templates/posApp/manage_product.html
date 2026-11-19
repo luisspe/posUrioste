@@ -34,6 +34,11 @@
                 <input type="text" name="price" id="price" class="form-control form-control-sm rounded-0" value="{% if product.price %}{{product.price}}{% endif %}" required>
             </div>
             <div class="form-group mb-3">
+                <label for="dias_vigencia" class="control-label">Días de clases que cubre</label>
+                <input type="number" min="0" name="dias_vigencia" id="dias_vigencia" class="form-control form-control-sm rounded-0" value="{% if product.dias_vigencia %}{{ product.dias_vigencia }}{% endif %}">
+                <small class="form-text text-muted">Ej. 30 para una mensualidad. Déjalo vacío si el producto no es pago de clases (comida, material, inscripción...).</small>
+            </div>
+            <div class="form-group mb-3">
                 <label for="cantidad_disponible" class="control-label">Cantidad Disponible</label>
                 <input type="number" name="cantidad_disponible" id="cantidad_disponible" class="form-control form-control-sm rounded-0" value="{% if product.cantidad_disponible %}{{ product.cantidad_disponible }}{% else %}0{% endif %}" required>
             </div>

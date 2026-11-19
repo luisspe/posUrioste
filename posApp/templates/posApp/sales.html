@@ -1,316 +1,244 @@
 {% extends "posApp/base.html" %}
-
+{% load humanize %}
 {% block pageContent %}
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<div class="u-page">
+    <header class="u-head">
+        <div>
+            <h1 class="u-title">Reportes de venta</h1>
+            <p class="u-subtitle" id="subtitulo">
+                {% if cliente_filtrado %}Todas las compras de {{ cliente_filtrado.nombre }} {{ cliente_filtrado.apellido_paterno }}
+                {% elif start_date == end_date %}{{ start_date|date:"l j \d\e F"|lower }}
+                {% else %}Del {{ start_date|date:"j \d\e F"|lower }} al {{ end_date|date:"j \d\e F \d\e Y"|lower }}{% endif %}
+            </p>
+        </div>
+        <div class="u-ficha__acciones">
+            <button type="button" class="u-btn u-btn--ghost" id="capturar">
+                <span class="material-symbols-rounded" aria-hidden="true">image</span>Imagen
+            </button>
+            <a class="u-btn u-btn--ghost" id="exportar" href="{% url 'export_sales_to_excel' %}?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}">
+                <span class="material-symbols-rounded" aria-hidden="true">download</span>Excel
+            </a>
+        </div>
+    </header>
 
-<!-- JS de Select2 -->
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-<div class="mdc-layout-grid__cell stretch-card mdc-layout-grid__cell--span-12">
-    <div class="mdc-card py-2">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h4 class="card-title mb-0">Lista de ventas</h4>
-            <div>
-                <button id="captureBtn" class="btn btn-primary">Capturar Tabla</button>
-                <form method="GET" action="{% url 'export_sales_to_excel' %}" class="d-inline">
-                    <input type="hidden" name="start_date" value="{{ start_date }}">
-                    <input type="hidden" name="end_date" value="{{ end_date }}">
-                    <button type="submit" class="btn btn-success">Descargar Excel</button>
-                </form>
+    <section class="u-panel u-filtros" aria-label="Periodo y filtros">
+        <div class="u-filtros__fila">
+            <div class="u-chips" id="periodos">
+                {% for p in periodos %}
+                <a class="u-chip{% if p.activo %} is-active{% endif %}" href="?{{ p.url }}">{{ p.nombre }}</a>
+                {% endfor %}
             </div>
         </div>
-        <form method="GET" class="form-inline mb-2">
-            <div class="form-group mr-3 mb-2">
-                <label for="start_date">Fecha inicio:</label>
-                <input type="date" name="start_date" value="{{ start_date }}" class="form-control mx-sm-3" 
-                >
-            </div>
-            <div class="form-group mr-3 mb-2">
-                <label for="end_date">Fecha fin:</label>
-                <input type="date" name="end_date" value="{{ end_date }}" class="form-control mx-sm-3" 
-                >
-            </div>
-            <div class="form-group mr-3 mb-2">
-                <label for="cliente_id">Cliente:</label>
-                <select id="cliente-select" name="cliente_id" class="form-control mx-sm-3">
+        <form method="GET" class="u-filtros__fila u-reporte__filtros" id="filtros-ventas">
+            <label class="u-campo">
+                <span>Desde</span>
+                <input type="date" name="start_date" value="{{ start_date|date:'Y-m-d' }}" class="u-input">
+            </label>
+            <label class="u-campo">
+                <span>Hasta</span>
+                <input type="date" name="end_date" value="{{ end_date|date:'Y-m-d' }}" class="u-input">
+            </label>
+            <label class="u-campo u-campo--ancho">
+                <span>Cliente</span>
+                <select id="cliente-select" name="cliente_id" class="u-input">
                     <option value="">Todos los clientes</option>
                     {% for cliente in clientes %}
-                    <option value="{{ cliente.id }}" {% if cliente.id == request.GET.cliente_id %}selected{% endif %}>{{ cliente.nombre }} {{cliente.apellido_paterno}} {{cliente.apellido_materno}} </option>
+                    <option value="{{ cliente.id }}" {% if filtros.cliente_id == cliente.id|stringformat:"s" %}selected{% endif %}>{{ cliente.nombre }} {{ cliente.apellido_paterno }} {{ cliente.apellido_materno }}</option>
                     {% endfor %}
                 </select>
-            </div>
-            <div class="form-group mr-3 mb-2">
-                <label for="formapago_id">Forma de pago:</label>
-                <select name="formapago_id" class="form-control mx-sm-3">
-                    <option value="">Todas las formas de pago</option>
+            </label>
+            <label class="u-campo">
+                <span>Forma de pago</span>
+                <select name="formapago_id" class="u-input">
+                    <option value="">Todas</option>
                     {% for pago in formapago %}
-                    <option value="{{ pago.id }}" {% if pago.id == request.GET.formapago_id %}selected{% endif %}>{{ pago.tipo }}</option>
+                    <option value="{{ pago.id }}" {% if filtros.formapago_id == pago.id|stringformat:"s" %}selected{% endif %}>{{ pago.tipo }}</option>
                     {% endfor %}
                 </select>
-            </div>
-            <div class="form-group mr-3 mb-2">
-                <label for="producto_id">Producto:</label>
-                <select name="producto_id" class="form-control mx-sm-3">
+            </label>
+            <label class="u-campo u-campo--ancho">
+                <span>Producto</span>
+                <select id="producto-select" name="producto_id" class="u-input">
                     <option value="">Todos los productos</option>
                     {% for producto in productos %}
-                    <option value="{{ producto.id }}" {% if producto.id == request.GET.producto_id %}selected{% endif %}>{{ producto.name }}</option>
+                    <option value="{{ producto.id }}" {% if filtros.producto_id == producto.id|stringformat:"s" %}selected{% endif %}>{{ producto.name }}</option>
                     {% endfor %}
                 </select>
-            </div>
-            <div class="form-group mr-3 mb-2">
-                <label for="categoria_id">Categoría:</label>
-                <select name="categoria_id" class="form-control mx-sm-3">
-                    <option value="">Todas las categorías</option>
-                    {% for categoria in categorias %}
-                    <option value="{{ categoria.id }}" {% if categoria.id == request.GET.categoria_id %}selected{% endif %}>{{ categoria.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="form-group mr-3 mb-2">
-                <label for="tipo_inscripcion_id">Tipo de inscripción:</label>
-                <select name="tipo_inscripcion_id" class="form-control mx-sm-3">
-                    <option value="">Todos los tipos de inscripción</option>
-                    {% for tipo in tipos_inscripcion %}
-                    <option value="{{ tipo.id }}" {% if tipo.id == request.GET.tipo_inscripcion_id %}selected{% endif %}>{{ tipo.nombre }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <button type="submit" class="btn btn-primary">Buscar</button>
+            </label>
+            <details class="u-mas-filtros"{% if mas_filtros %} open{% endif %}>
+                <summary>Más filtros</summary>
+                <div class="u-filtros__fila">
+                    <label class="u-campo">
+                        <span>Categoría</span>
+                        <select name="categoria_id" class="u-input">
+                            <option value="">Todas</option>
+                            {% for categoria in categorias %}
+                            <option value="{{ categoria.id }}" {% if filtros.categoria_id == categoria.id|stringformat:"s" %}selected{% endif %}>{{ categoria.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label class="u-campo">
+                        <span>Plan de inscripción</span>
+                        <select name="tipo_inscripcion_id" class="u-input">
+                            <option value="">Todos</option>
+                            {% for tipo in tipos_inscripcion %}
+                            <option value="{{ tipo.id }}" {% if filtros.tipo_inscripcion_id == tipo.id|stringformat:"s" %}selected{% endif %}>{{ tipo.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                </div>
+            </details>
+            <noscript><button type="submit" class="u-btn u-btn--primary">Buscar</button></noscript>
         </form>
-    </div>
-</div>
+    </section>
 
-<div class="mdc-layout-grid__cell stretch-card mdc-layout-grid__cell--span-12">
-    <div class="mdc-card">
-        <div class="table-responsive">
-            <table id="salesTable" class="table table-striped table-bordered">
-                <colgroup>
-                    <col width="5%">
-                    <col width="20%">
-                    <col width="15%">
-                    <col width="25%">
-                    <col width="15%">
-                    <col width="10%">
-                    <col width="10%">
-                </colgroup>
-                <thead>
-                    <tr>
-                        <th class="text-center py-1">#</th>
-                        <th class="text-center py-1">Fecha</th>
-                        <th class="text-center py-1">Detalle</th>
-                        <th class="text-center py-1">Cliente/Concepto</th>
-                        <th class="text-center py-1">Realizado Por</th>
-                        <th class="text-center py-1">Total</th>
-                        <th class="text-center py-1">Tipo de Pago</th> <!-- Nueva columna -->
-                        <th class="text-center py-1">Horario</th> <!-- Nueva columna -->
-                        <th class="text-center py-1">Plan de Inscripción</th> <!-- Nueva columna -->
-                        <th class="text-center py-1">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for sale in sales_data %}
-                    <tr>
-                        <td class="px-2 py-1 text-center">{{ sale.id }}</td>
-                        <td class="px-2 py-1 text-start">{{ sale.date }}</td>
-                        <td class="px-2 py-1 text-start">Venta</td>
-                        <td class="px-2 py-1 text-start">{{ sale.client_name }}</td>
-                        <td class="px-2 py-1 text-start">{{ sale.realizo }}</td>
-                        <td class="px-2 py-1 text-end">{{ sale.total }}</td>
-                        <td class="px-2 py-1 text-center">{{ sale.payment_type }}</td>
-                        <td class="px-2 py-1 text-center">{{ sale.horario }}</td>
-                        <td class="px-2 py-1 text-center">{{ sale.plan_inscripcion }}</td>
-                        <td class="px-2 py-1 text-center">
-                            <!-- Example actions -->
-                            <button class="mdc-button mdc-button--raised p-1 icon-button filled-button--light mdc-ripple-upgraded view-data" type="button" data-id="{{ sale.id }}" title="Ver Recibo">
-                                <i class="material-icons mdc-button__icon">receipt</i>
-                            </button>
-                            <button class="mdc-button mdc-button--raised p-1 icon-button filled-button--danger mdc-ripple-upgraded delete-data" type="button" data-id="{{ sale.id }}" title="Eliminar">
-                                <i class="material-icons mdc-button__icon">delete_outline</i>
-                            </button>
-                        </td>
-                    </tr>
+    <div id="resultados" aria-live="polite">
+        <section class="u-reporte__resumen" aria-label="Resumen">
+            <div class="u-panel u-dato">
+                <h2 class="u-dato__titulo">Ventas</h2>
+                <p class="u-dato__cifra">${{ total_ventas|floatformat:2|intcomma }}</p>
+                <p class="u-dato__nota">{{ numero_ventas }} venta{{ numero_ventas|pluralize }}</p>
+                {% if por_forma_pago %}
+                <ul class="u-formas">
+                    {% for f in por_forma_pago %}
+                    <li><span>{{ f.forma }}</span><b>${{ f.total|floatformat:2|intcomma }}</b></li>
                     {% endfor %}
-                    {% for salida in salida_data %}
-                    <tr class="table-danger">
-                        <td class="px-2 py-1 text-center">{{ salida.id }}</td>
-                        <td class="px-2 py-1 text-start">{{ salida.fecha|date:'Y-m-d' }}</td>
-                        <td class="px-2 py-1 text-start">Salida</td>
-                        <td class="px-2 py-1 text-start">{{ salida.concepto }}</td>
-                        <td class="px-2 py-1 text-start">N/A</td>
-                        <td class="px-2 py-1 text-end">-{{ salida.monto }}</td>
-                        <td class="px-2 py-1 text-center"></td>
-                        <td class="px-2 py-1 text-center"></td>
-                        <td class="px-2 py-1 text-center"></td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-                <tfoot>
-                    <tr>
-                        <th colspan="5" class="text-right">Total Ventas:</th>
-                        <th class="text-right">{{ total_ventas }}</th>
-                        <th></th>
-                    </tr>
-                    {% if totalEfectivo %}
-                    <tr>
-                        <th colspan="5" class="text-right">Total Efectivo:</th>
-                        <th class="text-right">
-                            <i class="material-icons">attach_money</i> <!-- Ícono de efectivo -->
-                            {{ totalEfectivo }}
-                        </th>
-                        <th></th>
-                    </tr>
-                    {% endif %}
-                    {% if totalTarjeta %}
-                    <tr>
-                        <th colspan="5" class="text-right">Total Tarjeta:</th>
-                        <th class="text-right">
-                            <i class="material-icons">credit_card</i> <!-- Ícono de tarjeta -->
-                            {{ totalTarjeta }}
-                        </th>
-                        <th></th>
-                    </tr>
-                    {% endif %}
-                    {% if totalBanco %}
-                    <tr>
-                        <th colspan="5" class="text-right">Total Banco:</th>
-                        <th class="text-right">
-                            <i class="material-icons">credit_card</i> <!-- Ícono de tarjeta -->
-                            {{ totalBanco }}
-                        </th>
-                        <th></th>
-                    </tr>
-                    {% endif %}
-                    <tr class="table-danger">
-                        <th colspan="5" class="text-right">Total Salidas:</th>
-                        <th class="text-right">-{{ total_salidas }}</th>
-                        <th></th>
-                    </tr>
-                    {% if neto >= 0 %}
-                    <tr class="table-success">
-                    {% else %}
-                    <tr class="table-danger">
-                    {% endif %}
-                        <th colspan="5" class="text-right">Neto:</th>
-                        <th class="text-right">{{ neto }}</th>
-                        <th></th>
-                    </tr>
-                </tfoot>
-            </table>
-        </div>
-        <div class="pagination-controls d-flex justify-content-center mt-3">
-            <nav aria-label="Page navigation">
-                <ul class="pagination">
-                    {% if page_obj.has_previous %}
-                        <li class="page-item">
-                            <a class="page-link" href="?{{ query_params }}&page=1" aria-label="First">
-                                <span aria-hidden="true">&laquo;&laquo;</span>
-                            </a>
-                        </li>
-                        <li class="page-item">
-                            <a class="page-link" href="?{{ query_params }}&page={{ page_obj.previous_page_number }}" aria-label="Previous">
-                                <span aria-hidden="true">&laquo;</span>
-                            </a>
-                        </li>
-                    {% endif %}
-                    
-                    <li class="page-item disabled">
-                        <span class="page-link">
-                            Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
-                        </span>
-                    </li>
-                    
-                    {% if page_obj.has_next %}
-                        <li class="page-item">
-                            <a class="page-link" href="?{{ query_params }}&page={{ page_obj.next_page_number }}" aria-label="Next">
-                                <span aria-hidden="true">&raquo;</span>
-                            </a>
-                        </li>
-                        <li class="page-item">
-                            <a class="page-link" href="?{{ query_params }}&page={{ page_obj.paginator.num_pages }}" aria-label="Last">
-                                <span aria-hidden="true">&raquo;&raquo;</span>
-                            </a>
-                        </li>
-                    {% endif %}
                 </ul>
-            </nav>
+                {% endif %}
+            </div>
+            <div class="u-panel u-dato">
+                <h2 class="u-dato__titulo">Salidas</h2>
+                <p class="u-dato__cifra{% if total_salidas %} u-dato__cifra--salida{% endif %}">{% if total_salidas %}−{% endif %}${{ total_salidas|floatformat:2|intcomma }}</p>
+                <p class="u-dato__nota">{{ salidas|length }} salida{{ salidas|length|pluralize }} registrada{{ salidas|length|pluralize }}</p>
+            </div>
+            <div class="u-panel u-dato u-dato--neto{% if neto < 0 %} negativo{% endif %}">
+                <h2 class="u-dato__titulo">Neto</h2>
+                <p class="u-dato__cifra">{% if neto < 0 %}−{% endif %}${{ neto_abs|floatformat:2|intcomma }}</p>
+                <p class="u-dato__nota">Ventas menos salidas</p>
+            </div>
+        </section>
+
+        {% if dias %}
+        <p class="u-rango" id="rango">Ventas {{ page_obj.start_index }} a {{ page_obj.end_index }} de {{ numero_ventas }}</p>
+        {% include "posApp/_paginacion.html" %}
+        <div class="u-ventas">
+            {% for dia in dias %}
+            <section class="u-panel u-dia">
+                <header class="u-dia__head">
+                    <h2 class="u-dia__fecha">{{ dia.fecha|date:"l j \d\e F"|lower|capfirst }}</h2>
+                    <span class="u-dia__total">${{ dia.total|floatformat:2|intcomma }}</span>
+                </header>
+                <ul class="u-ventas__lista">
+                    {% for v in dia.ventas %}
+                    {% with venta=v.venta %}
+                    <li class="u-venta">
+                        <span class="u-venta__hora">{{ v.hora|time:"H:i" }}</span>
+                        <div class="u-venta__detalle">
+                            {% if venta.client %}
+                            <a class="u-venta__cliente" href="{% url 'cliente-ficha' venta.client_id %}">{{ venta.client.nombre }} {{ venta.client.apellido_paterno }} {{ venta.client.apellido_materno }}</a>
+                            {% else %}<span class="u-venta__cliente">Sin cliente</span>{% endif %}
+                            <span class="u-venta__conceptos">{{ v.conceptos|join:", "|default:"Sin productos" }}</span>
+                            <span class="u-alumno__tags">
+                                <span class="u-tag">{{ venta.tipoPago|default:"Sin forma de pago" }}</span>
+                                {% if venta.usuario %}<span class="u-tag">Cobró {{ venta.usuario.username }}</span>{% endif %}
+                                {% if venta.proximo_pago %}<span class="u-tag u-tag--proximo">Próximo pago {{ venta.proximo_pago|date:"d/m" }}</span>{% endif %}
+                            </span>
+                            {% if venta.comentario %}<span class="u-pago__detalle">{{ venta.comentario }}</span>{% endif %}
+                        </div>
+                        <span class="u-venta__total">${{ venta.grand_total|floatformat:2|intcomma }}</span>
+                        <div class="u-venta__acciones">
+                            <button class="u-btn u-btn--ghost u-btn--icon view-data" type="button" data-id="{{ venta.id }}" title="Ver ticket" aria-label="Ver ticket"><span class="material-symbols-rounded">receipt_long</span></button>
+                            <button class="u-btn u-btn--ghost u-btn--icon u-btn--peligro delete-data" type="button" data-id="{{ venta.id }}" data-descripcion="{{ v.hora|time:'H:i' }} de {{ venta.client.nombre|default:'sin cliente' }} por ${{ venta.grand_total|floatformat:2 }}" title="Eliminar venta" aria-label="Eliminar venta"><span class="material-symbols-rounded">delete</span></button>
+                        </div>
+                    </li>
+                    {% endwith %}
+                    {% endfor %}
+                </ul>
+            </section>
+            {% endfor %}
         </div>
 
+        {% include "posApp/_paginacion.html" %}
+        {% else %}
+        <div class="u-panel u-vacio">
+            <span class="material-symbols-rounded">point_of_sale</span>
+            <strong>No hay ventas en este periodo</strong>
+            Prueba con otro periodo o quita algún filtro.
+        </div>
+        {% endif %}
+
+        {% if salidas %}
+        <section class="u-panel u-seccion u-salidas">
+            <h2 class="u-seccion__titulo">Salidas</h2>
+            <ul class="u-ventas__lista">
+                {% for salida in salidas %}
+                <li class="u-venta">
+                    <span class="u-venta__hora">{{ salida.fecha|date:"d/m" }}</span>
+                    <div class="u-venta__detalle">
+                        <span class="u-venta__cliente">{{ salida.concepto|default:"Sin concepto" }}</span>
+                        {% if salida.comentario %}<span class="u-pago__detalle">{{ salida.comentario }}</span>{% endif %}
+                    </div>
+                    <span class="u-venta__total u-venta__total--salida">−${{ salida.monto|floatformat:2|intcomma }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </section>
+        {% endif %}
     </div>
 </div>
-
-
-
-<style>
-    .table {
-        color: #333;
-        background-color: #fff;
-    }
-    .table thead th {
-        background-color: #f2f2f2;
-        color: #000;
-        font-weight: bold;
-    }
-    .table tbody tr {
-        border-bottom: 1px solid #ccc;
-    }
-    .table-danger {
-        background-color: #f8d7da;
-    }
-    .table-success {
-        background-color: #d4edda;
-    }
-    .mdc-button {
-        border-radius: 4px;
-    }
-    .icon-button {
-        width: 36px;
-        height: 36px;
-    }
-    .form-control, .form-select {
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        margin-right: 10px;
-    }
-    .bg-dark {
-        background-color: #fff !important;
-    }
-    .text-white {
-        color: #000 !important;
-    }
-    .form-inline .form-group {
-        display: flex;
-        align-items: center;
-        margin-right: 15px;
-    }
-    .form-inline .form-control,
-    .form-inline .form-select {
-        margin-left: 5px;
-        margin-right: 5px;
-    }
-    .mb-2 {
-        margin-bottom: 1rem;
-    }
-    .mr-3 {
-        margin-right: 1rem;
-    }
-    .btn-primary, .btn-success {
-        margin-right: 10px;
-    }
-
-</style>
 {% endblock pageContent %}
 
 {% block ScriptBlock %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>
     $(function() {
-        $('.view-data').click(function() {
-            uni_modal("Recibo de ventas", "{% url 'receipt-modal' %}?id=" + $(this).attr('data-id'))
+        var $form = $('#filtros-ventas');
+        var peticion = null;
+
+
+        // Los filtros se aplican al momento: pide el reporte y cambia solo lo que depende de ellos
+        function actualizar(urlPagina) {
+            var params = $form.find(':input').filter(function() { return this.name && this.value; }).serialize();
+            var url = typeof urlPagina === 'string' ? urlPagina : "{% url 'sales-page' %}" + (params ? '?' + params : '');
+            if (peticion) peticion.abort();
+            $('#resultados').css('opacity', .55);
+            peticion = $.get(url, function(html) {
+                var doc = new DOMParser().parseFromString(html, 'text/html');
+                ['resultados', 'periodos', 'subtitulo'].forEach(function(id) {
+                    document.getElementById(id).innerHTML = doc.getElementById(id).innerHTML;
+                });
+                document.getElementById('exportar').href = doc.getElementById('exportar').getAttribute('href');
+                history.replaceState(null, '', url);
+                if (typeof urlPagina === 'string') {
+                    document.getElementById('resultados').scrollIntoView({block: 'start'});
+                }
+            }).always(function() {
+                $('#resultados').css('opacity', 1);
+            });
+        }
+        $form.on('change', 'select, input', function() { actualizar(); });
+        // Cambiar de página sin recargar todo
+        $(document).on('click', '.u-paginas a', function(e) {
+            e.preventDefault();
+            actualizar(this.getAttribute('href'));
         });
-        $('.delete-data').click(function() {
-            _conf("Quieres eliminar <b>" + $(this).attr('data-code') + "</b> transaccion?", "delete_sale", [$(this).attr('data-id')]);
+        $form.on('submit', function(e) { e.preventDefault(); actualizar(); });
+
+        $(document).on('click', '.view-data', function() {
+            uni_modal("Ticket de venta", "{% url 'receipt-modal' %}?id=" + $(this).attr('data-id'));
         });
-        $('#cliente_id').select2({
-            placeholder: "Selecciona un cliente aqui",
-            width: '100%'
+        $(document).on('click', '.delete-data', function() {
+            _conf("¿Eliminar la venta de las " + $('<div>').text($(this).data('descripcion')).html() + "? Esto no se puede deshacer.", "delete_sale", [$(this).attr('data-id')]);
+        });
+
+        $('#capturar').click(function() {
+            var $boton = $(this).prop('disabled', true);
+            html2canvas(document.getElementById('resultados'), {backgroundColor: '#EEF4F9', scale: 2}).then(function(canvas) {
+                var a = document.createElement('a');
+                a.href = canvas.toDataURL('image/png');
+                a.download = 'ventas_{{ start_date|date:"Y-m-d" }}.png';
+                a.click();
+            }).finally(function() { $boton.prop('disabled', false); });
         });
     });
 
@@ -326,56 +254,18 @@
             dataType: "json",
             error: function(err) {
                 console.log(err);
-                alert_toast("An error occured.", 'error');
+                alert_toast("Ocurrió un error.", 'error');
                 end_loader();
             },
             success: function(resp) {
                 if (typeof resp == 'object' && resp.status == 'success') {
                     location.reload();
                 } else {
-                    alert_toast("An error occured.", 'error');
+                    alert_toast("Ocurrió un error.", 'error');
                     end_loader();
                 }
             }
         });
     }
-
-    document.getElementById('captureBtn').addEventListener('click', function() {
-        var salesTable = document.getElementById('salesTable');
-        html2canvas(salesTable, {
-            onrendered: function(canvas) {
-                // Crear un elemento de imagen
-                var img = canvas.toDataURL("image/png");
-                var link = document.createElement('a');
-                link.href = img;
-                link.download = 'sales_table.png';
-                link.click();
-            }
-        });
-    });
-
-    $(document).ready(function() {
-        $('#cliente-select').select2({
-            placeholder: 'Buscar cliente...',  // Un marcador de posición para el campo de búsqueda
-            allowClear: true,  // Permite limpiar la selección
-            width: '100%',  // Ajustar el ancho del select
-            matcher: function(params, data) {
-                // Si no hay datos a buscar, mostrar todas las opciones
-                if ($.trim(params.term) === '') {
-                    return data;
-                }
-    
-                // Filtrar las opciones, buscando solo en el nombre del cliente
-                if (data.text.toLowerCase().includes(params.term.toLowerCase())) {
-                    return data;
-                }
-    
-                // Si no hay coincidencias, no mostrar la opción
-                return null;
-            }
-        });
-    });
-
 </script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.4.1/html2canvas.min.js"></script>
 {% endblock ScriptBlock %}

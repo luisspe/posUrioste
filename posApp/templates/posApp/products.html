@@ -70,14 +70,6 @@
         $('.delete-data').click(function() {
             _conf("Quieres eliminar este producto?", "delete_product", [$(this).attr('data-id')])
         })
-
-        $('#uni_modal').on('shown.bs.modal', function() {
-            $('#category_id').select2({
-                placeholder: "Selecciona una categoria aqui",
-                width: '100%',
-                dropdownParent: $('#uni_modal')
-            })
-        })
     })
 
     function delete_product($id) {

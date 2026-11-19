@@ -1,172 +1,183 @@
-{% extends "posApp/base.html" %} 
+{% extends "posApp/base.html" %}
+{% load static %}
 {% block pageContent %}
-<div class="mdc-layout-grid__cell stretch-card mdc-layout-grid__cell--span-12">
-    <div class="mdc-card py-2">
-        <div class="d-flex justify-content-between align-items-center">
-            <h4 class="card-title mb-0">Lista de clientes</h4>
-            <form method="GET">
-                <label for="query">Buscar por nombre:</label>
-                <input class="" type="text" name="q" id="query" value="" placeholder="Buscar" autocapitalize="words" />
-                
-                <label for="estado_mensualidad">Estado de Mensualidad:</label>
-                <select name="estado_mensualidad" id="estado_mensualidad" onchange="this.form.submit()">
-                    <option value="">Todos</option>
-                    <option value="Al corriente" {% if estado_filtro == "Al corriente" %}selected{% endif %}>Al corriente</option>
-                    <option value="Vencido" {% if estado_filtro == "Vencido" %}selected{% endif %}>Vencido</option>
-                    <option value="Sin mensualidades" {% if estado_filtro == "Sin mensualidades" %}selected{% endif %}>Sin mensualidades</option>
-                </select>
-
-                <label for="horario">Horario:</label>
-                <select name="horario" id="horario" onchange="this.form.submit()">
-                    <option value="">Todos</option>
-                    {% for hour in horarios %}
-                    <option value="{{ hour }}" {% if horario_filtro == hour %}selected{% endif %}>{{ hour }}</option>
-                    {% endfor %}
-                </select>
-
-                <label for="plan_inscripcion">Plan de Inscripción:</label>
-                <select name="plan_inscripcion" id="plan_inscripcion" onchange="this.form.submit()">
-                    <option value="">Todos</option>
-                    {% for plan in planes_inscripcion %}
-                    <option value="{{ plan.id }}" {% if plan_inscripcion_filtro == plan.id|stringformat:"s" %}selected{% endif %}>{{ plan.nombre }}</option>
-                    {% endfor %}
-                </select>
-                
-                <button type="submit">Buscar</button>
-            </form>
-            <div class="text-start">
-                <button class="btn btn-primary bg-gradient btn-sm rounded-0" id="create_new"><i class="mdi mdi-plus"></i><span> Agregar Nuevo</span></button>
-            </div>
+<div class="u-page">
+    <header class="u-head">
+        <div>
+            <h1 class="u-title">Clientes</h1>
+            <p class="u-subtitle" id="conteo-clientes">{{ clients.paginator.count }} cliente{{ clients.paginator.count|pluralize }}{% if hay_filtros %} encontrado{{ clients.paginator.count|pluralize }}{% endif %}</p>
         </div>
-    </div>
-</div>
-<div class="mdc-layout-grid__cell stretch-card mdc-layout-grid__cell--span-12">
-    <div class="mdc-card">
-        <div class="table-responsive">
-            <table class="table table-striped table-bordered">
-                <colgroup>
-                    <col width="5%">
-                    <col width="20%">
-                    <col width="20%">
-                    <col width="15%">
-                    <col width="15%">
+        <span class="u-head__acciones">
+            <button type="button" class="u-btn u-btn--ghost" data-guia-abrir>
+                <span class="material-symbols-rounded" aria-hidden="true">help</span>¿Cómo funciona?
+            </button>
+            <button type="button" class="u-btn u-btn--primary" id="create_new">
+                <span class="material-symbols-rounded" aria-hidden="true">person_add</span>Agregar cliente
+            </button>
+        </span>
+    </header>
 
-                </colgroup>
-                <thead>
-                    <tr>
-
-                        <th class="text-center py-1">Nombre</th>
-                        <th class="text-center py-1">Numero</th>
-                        <th class="text-center py-1">Status</th>
-                        <th class="text-center py-1">Estado de Mensualidad</th>
-                        <th class="text-center py-1">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for client in clients %}
-                    <tr class="{% if client.estado_mensualidad == 'Vencido' %}bg-danger{% endif %}">
-
-                        <td class="px-2 py-1 text-start">{{ client.nombre }} {{ client.apellido_paterno }} {{ client.apellido_materno }}</td>
-                        <td class="px-2 py-1 text-start">{{ client.celular }}</td>
-                        <td class="px-2 py-1 text-center">
-                            {% if client.status == 1 %}
-                            <span class="badge bg-primary rounded-pill px-3">Activo</span>
-                            {% elif client.status == 2 %}
-                                <span class="badge bg-secondary rounded-pill px-3">Inactivo</span>
-                            {% elif client.status == 3 %}
-                                <span class="badge bg-warning rounded-pill px-3">Baja Temporal</span>
-                            {% elif client.status == 4 %}
-                                <span class="badge bg-danger rounded-pill px-3">Baja Definitiva</span>
-                            {% endif %}
-                            </td>
-                        <td class="px-2 py-1 text-center">
-                            {% if client.estado_mensualidad == 'Vencido' %}
-                            <span class="badge bg-danger rounded-pill px-3">Vencido</span>
-                            {% elif client.estado_mensualidad == 'Al corriente' %}
-                            <span class="badge bg-success rounded-pill px-3">Al corriente</span>
-                            {% else %}
-                            <span class="badge bg-warning rounded-pill px-3">Sin mensualidades</span>
-                            {% endif %}
-                        </td>
-                        <td class="px-2 py-1 text-center">
-                            <button class="mdc-button mdc-button--raised p-1 icon-button filled-button--light mdc-ripple-upgraded edit-data" type="button" data-id="{{ client.pk }}" title="Edit">
-                                <i class="material-icons mdc-button__icon">edit</i>
-                            </button>
-                            <button class="mdc-button mdc-button--raised p-1 icon-button filled-button--danger mdc-ripple-upgraded delete-data" type="button" data-id="{{ client.pk }}" title="Delete">
-                                <i class="material-icons mdc-button__icon">deleteoutline</i>
-                            </button>
-                            {% if client.estado_mensualidad == 'Vencido' %}
-                            <button class="mdc-button mdc-button--raised p-1 icon-button filled-button--primary mdc-ripple-upgraded add-payment" type="button" data-id="{{ client.pk }}" title="Add Payment">
-                                <a href="{% url 'pagar_primera_mensualidad' client.pk %}"><i class="material-icons mdc-button__icon">add</i></a>
-                            </button>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+    <form method="GET" class="u-panel u-buscador" id="buscador" role="search">
+        <div class="u-buscador__campo">
+            <span class="material-symbols-rounded" aria-hidden="true">search</span>
+            <input type="search" name="q" id="query" value="{{ query }}" placeholder="Nombre, celular o código" autocomplete="off" autocapitalize="words" aria-label="Buscar cliente">
         </div>
-        <div class="pagination-controls d-flex justify-content-center mt-3">
-            <nav aria-label="Page navigation">
-                <ul class="pagination">
-                    {# Usamos 'clients' porque así se llama la variable en tu bucle for #}
-                    {% if clients.has_previous %}
-                        <li class="page-item">
-                            <a class="page-link" href="?{{ query_params }}&page=1" aria-label="First">
-                                <span aria-hidden="true">&laquo;&laquo;</span>
-                            </a>
-                        </li>
-                        <li class="page-item">
-                            <a class="page-link" href="?{{ query_params }}&page={{ clients.previous_page_number }}" aria-label="Previous">
-                                <span aria-hidden="true">&laquo;</span>
-                            </a>
-                        </li>
-                    {% endif %}
-                    
-                    <li class="page-item disabled">
-                        <span class="page-link">
-                            Página {{ clients.number }} de {{ clients.paginator.num_pages }}
+        <div class="u-buscador__filtros">
+            <select class="u-input" name="estado" aria-label="Estado de pago">
+                <option value="">Pago</option>
+                {% for e in estados_pago %}
+                <option value="{{ e }}" {% if estado_filtro == e %}selected{% endif %}>{{ e }}</option>
+                {% endfor %}
+            </select>
+            <select class="u-input" name="status" aria-label="Situación del cliente">
+                <option value="">Situación</option>
+                <option value="1" {% if status_filtro == "1" %}selected{% endif %}>Solo activos</option>
+                <option value="2" {% if status_filtro == "2" %}selected{% endif %}>Inactivos</option>
+                <option value="3" {% if status_filtro == "3" %}selected{% endif %}>Baja temporal</option>
+                <option value="4" {% if status_filtro == "4" %}selected{% endif %}>Baja definitiva</option>
+            </select>
+            <select class="u-input" name="horario" aria-label="Horario">
+                <option value="">Horario</option>
+                {% for h in horarios %}
+                <option value="{{ h }}" {% if horario_filtro|lower == h|lower %}selected{% endif %}>{{ h }}</option>
+                {% endfor %}
+            </select>
+            <select class="u-input" name="plan_inscripcion" aria-label="Plan de inscripción">
+                <option value="">Plan</option>
+                {% for plan in planes_inscripcion %}
+                <option value="{{ plan.id }}" {% if plan_inscripcion_filtro == plan.id|stringformat:"s" %}selected{% endif %}>{{ plan.nombre }}</option>
+                {% endfor %}
+            </select>
+            <a href="{% url 'client-page' %}" class="u-btn u-btn--ghost" id="limpiar" {% if not hay_filtros %}hidden{% endif %}>Limpiar</a>
+        </div>
+        <noscript><button type="submit" class="u-btn u-btn--primary">Buscar</button></noscript>
+    </form>
+
+    <div id="resultados" aria-live="polite">
+        {% if filas %}
+        <div class="u-panel u-clientes">
+            {% for fila in filas %}
+            {% with c=fila.cliente %}
+            <div class="u-cliente{% if c.status != 1 %} es-baja{% endif %}">
+                <a class="u-cliente__quien" href="{% url 'cliente-ficha' c.pk %}">
+                    <span class="u-avatar" aria-hidden="true">{{ c.iniciales }}</span>
+                    <span class="u-cliente__datos">
+                        <span class="u-alumno__nombre">{{ c.nombre }} {{ c.apellido_paterno }} {{ c.apellido_materno }}</span>
+                        <span class="u-alumno__tags">
+                            {% if c.status == 2 %}<span class="u-tag u-tag--baja">Inactivo</span>
+                            {% elif c.status == 3 %}<span class="u-tag u-tag--baja">Baja temporal</span>
+                            {% elif c.status == 4 %}<span class="u-tag u-tag--baja">Baja definitiva</span>{% endif %}
+                            {% if c.nivel %}<span class="u-tag">{{ c.nivel }}</span>{% endif %}
+                            {% if c.horario %}<span class="u-tag">{{ c.horario }}</span>{% endif %}
+                            {% if c.celular %}<span class="u-tag u-tag--tel">{{ c.celular }}</span>{% endif %}
                         </span>
-                    </li>
-                    
-                    {% if clients.has_next %}
-                        <li class="page-item">
-                            <a class="page-link" href="?{{ query_params }}&page={{ clients.next_page_number }}" aria-label="Next">
-                                <span aria-hidden="true">&raquo;</span>
-                            </a>
-                        </li>
-                        <li class="page-item">
-                            <a class="page-link" href="?{{ query_params }}&page={{ clients.paginator.num_pages }}" aria-label="Last">
-                                <span aria-hidden="true">&raquo;&raquo;</span>
-                            </a>
-                        </li>
+                    </span>
+                </a>
+                <div class="u-cliente__pago">{% include "posApp/_estado_pago.html" with pago=fila.pago cliente=c %}</div>
+                <div class="u-cliente__acciones">
+                    <a class="u-btn u-btn--ghost" href="{% url 'cliente-ficha' c.pk %}">Ver reporte</a>
+                    {% if fila.pago.estado == 'Vencido' or fila.pago.estado == 'Sin pagos' %}
+                    <a class="u-btn u-btn--ghost u-btn--icon" href="{% url 'pos-page' %}?cliente={{ c.pk }}" title="Cobrar en el punto de venta" aria-label="Cobrar a {{ c.nombre }} en el punto de venta"><span class="material-symbols-rounded">point_of_sale</span></a>
                     {% endif %}
-                </ul>
-            </nav>
+                    <button class="u-btn u-btn--ghost u-btn--icon edit-data" type="button" data-id="{{ c.pk }}" title="Editar" aria-label="Editar a {{ c.nombre }}"><span class="material-symbols-rounded">edit</span></button>
+                    <a class="u-btn u-btn--ghost u-btn--icon ver-credencial" href="{% url 'cliente-credencial' c.pk %}" data-codigo="{{ c.codigo_asistencia }}" data-nombre="{{ c.nombre }} {{ c.apellido_paterno }} {{ c.apellido_materno }}" data-grupo="{% if c.nivel %}{{ c.nivel }}{% endif %}{% if c.nivel and c.horario %}, {% endif %}{{ c.horario }}" title="Credencial QR" aria-label="Credencial de {{ c.nombre }}"><span class="material-symbols-rounded">qr_code_2</span></a>
+                    <button class="u-btn u-btn--ghost u-btn--icon u-btn--peligro delete-data" type="button" data-id="{{ c.pk }}" title="Eliminar" aria-label="Eliminar a {{ c.nombre }}"><span class="material-symbols-rounded">delete</span></button>
+                </div>
+            </div>
+            {% endwith %}
+            {% endfor %}
         </div>
+
+        {% if clients.paginator.num_pages > 1 %}
+        <nav class="u-paginas" aria-label="Páginas">
+            {% if clients.has_previous %}
+            <a class="u-btn u-btn--ghost u-btn--icon" href="?{{ query_params }}&page=1" title="Primera página"><span class="material-symbols-rounded">first_page</span></a>
+            <a class="u-btn u-btn--ghost u-btn--icon" href="?{{ query_params }}&page={{ clients.previous_page_number }}" title="Anterior"><span class="material-symbols-rounded">chevron_left</span></a>
+            {% endif %}
+            <span>Página {{ clients.number }} de {{ clients.paginator.num_pages }}</span>
+            {% if clients.has_next %}
+            <a class="u-btn u-btn--ghost u-btn--icon" href="?{{ query_params }}&page={{ clients.next_page_number }}" title="Siguiente"><span class="material-symbols-rounded">chevron_right</span></a>
+            <a class="u-btn u-btn--ghost u-btn--icon" href="?{{ query_params }}&page={{ clients.paginator.num_pages }}" title="Última página"><span class="material-symbols-rounded">last_page</span></a>
+            {% endif %}
+        </nav>
+        {% endif %}
+        {% else %}
+        <div class="u-panel u-vacio">
+            <span class="material-symbols-rounded">person_search</span>
+            <strong>No encontramos clientes</strong>
+            {% if query %}Revisa cómo está escrito o busca solo por un apellido o por el celular.{% else %}Prueba quitando algún filtro.{% endif %}
+        </div>
+        {% endif %}
     </div>
-    
 </div>
-{% endblock pageContent %} 
+<div class="u-guia" data-guia role="dialog" aria-modal="true" aria-labelledby="guia-titulo">
+    <div class="u-guia__caja">
+        <section class="u-guia__paso activo">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/clientes_1.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2 id="guia-titulo">1. Busca un alumno</h2>
+            <p>Escribe parte del nombre o el celular y presiona Enter. En cada renglón ves si va al corriente y los botones para cobrar, editar o ver su credencial.</p>
+            <p>Con los filtros ves solo a los que deben o a los de un grupo.</p>
+        </section>
+        <section class="u-guia__paso">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/clientes_2.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2>2. Agrega un cliente</h2>
+            <p>Toca «Agregar cliente» y llena nombre, fecha de nacimiento y género.</p>
+            <p>Al elegir su grupo el horario se llena solo. Pon su día de pago y celular, y toca Guardar.</p>
+        </section>
+        <section class="u-guia__paso">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/clientes_3.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2>3. La ficha del alumno</h2>
+            <p>Toca el nombre para abrir su ficha: estado de pago, asistencias, pagos registrados, grupos y todo lo que ha comprado.</p>
+        </section>
+        <section class="u-guia__paso">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/clientes_4.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2>4. Credencial y cobro</h2>
+            <p>Desde la ficha abres su credencial con el código QR para descargarla o imprimirla.</p>
+            <p>Con «Cobrar» vas al punto de venta para cobrarle.</p>
+        </section>
+    </div>
+</div>
+{% include "posApp/_guia_pasos.html" %}
+{% endblock pageContent %}
 {% block ScriptBlock %}
+{% include "posApp/_credencial_modal.html" %}
 <script>
     $(function() {
-        $('#create_new').click(function() {
-            uni_modal("Agregar Nuevo Cliente", "{% url 'manage_clients-page' %}")
-        })
-        $('.edit-data').click(function() {
-            uni_modal("Editar Cliente", "{% url 'manage_clients-page' %}?id=" + $(this).attr('data-id'))
-        })
-        $('.delete-data').click(function() {
-            _conf("¿Estás seguro de eliminar este cliente?", "delete_client", [$(this).attr('data-id')])
-        })
+        var $form = $('#buscador');
+        var timer = null, peticion = null;
 
-        $('#uni_modal').on('shown.bs.modal', function() {
-            $('#category_id').select2({
-                placeholder: "Selecciona una categoría aquí",
-                width: '100%',
-                dropdownParent: $('#uni_modal')
-            })
+        // Búsqueda en vivo: pide la misma página con los filtros y solo cambia la lista
+        function buscar() {
+            var params = $form.find(':input').filter(function() { return this.name && this.value; }).serialize();
+            var url = "{% url 'client-page' %}" + (params ? '?' + params : '');
+            if (peticion) peticion.abort();
+            $('#resultados').css('opacity', .55);
+            peticion = $.get(url, function(html) {
+                var doc = new DOMParser().parseFromString(html, 'text/html');
+                $('#resultados').html(doc.getElementById('resultados').innerHTML);
+                $('#conteo-clientes').text(doc.getElementById('conteo-clientes').textContent);
+                history.replaceState(null, '', url);
+                $('#limpiar').attr('hidden', !$form.find(':input').filter(function() { return this.value; }).length);
+            }).always(function() {
+                $('#resultados').css('opacity', 1);
+            });
+        }
+
+        $('#query').on('input', function() {
+            clearTimeout(timer);
+            timer = setTimeout(buscar, 300);
+        });
+        $form.on('change', 'select', buscar);
+        $form.on('submit', function(e) { e.preventDefault(); buscar(); });
+
+        $('#create_new').click(function() {
+            uni_modal("Agregar nuevo cliente", "{% url 'manage_clients-page' %}", "modal-xl u-modal-cliente")
+        })
+        $(document).on('click', '.edit-data', function() {
+            uni_modal("Editar cliente", "{% url 'manage_clients-page' %}?id=" + $(this).attr('data-id'), "modal-xl u-modal-cliente")
+        })
+        $(document).on('click', '.delete-data', function() {
+            _conf("¿Seguro que quieres eliminar este cliente? Esto no se puede deshacer.", "delete_client", [$(this).attr('data-id')])
         })
     })
 

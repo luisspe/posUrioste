@@ -1,0 +1,4 @@
+{% comment %}Cambio contra el mes pasado. "inverso": para salidas, subir es malo.{% endcomment %}
+{% if valor is None %}<span class="u-cambio u-cambio--nulo">Sin datos para comparar</span>
+{% elif valor == 0 %}<span class="u-cambio u-cambio--nulo">Igual<span class="u-cambio__contra">&nbsp;que {{ contra }}</span></span>
+{% else %}<span class="u-cambio {% if valor > 0 %}{% if inverso %}u-cambio--mal{% else %}u-cambio--bien{% endif %}{% else %}{% if inverso %}u-cambio--bien{% else %}u-cambio--mal{% endif %}{% endif %}"><span class="material-symbols-rounded" aria-hidden="true">{% if valor > 0 %}trending_up{% else %}trending_down{% endif %}</span>{% if valor > 0 %}+{% endif %}{{ valor }}%<span class="u-cambio__contra">&nbsp;vs {{ contra }}</span></span>{% endif %}

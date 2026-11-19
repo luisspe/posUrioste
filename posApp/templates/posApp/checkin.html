@@ -1,0 +1,379 @@
+{% extends "posApp/base.html" %}
+{% load static %}
+{% block pageContent %}
+<div class="u-page">
+    <header class="u-head">
+        <div>
+            <h1 class="u-title">Check-in</h1>
+            <p class="u-subtitle">{{ hoy|date:"l j \d\e F"|lower }}</p>
+        </div>
+        <span class="u-head__acciones">
+            <button type="button" class="u-btn u-btn--ghost" data-guia-abrir>
+                <span class="material-symbols-rounded" aria-hidden="true">help</span>¿Cómo funciona?
+            </button>
+            <a href="{% url 'credenciales-qr' %}" class="u-btn u-btn--ghost">
+                <span class="material-symbols-rounded" aria-hidden="true">badge</span>Imprimir credenciales
+            </a>
+        </span>
+    </header>
+
+    <div class="u-checkin">
+        <section class="u-panel u-escaner" aria-label="Escáner">
+            <div class="u-modo" role="group" aria-label="Cómo leer el código">
+                <button type="button" class="is-active" data-modo="lector">
+                    <span class="material-symbols-rounded" aria-hidden="true">barcode_reader</span>Lector
+                </button>
+                <button type="button" data-modo="camara">
+                    <span class="material-symbols-rounded" aria-hidden="true">photo_camera</span>Cámara
+                </button>
+            </div>
+
+            <form id="checkin-form" class="u-codigo" autocomplete="off">
+                <span class="material-symbols-rounded" aria-hidden="true">qr_code_2</span>
+                <input type="text" id="codigo" placeholder="Código, número o nombre" aria-label="Código o nombre del alumno" autofocus>
+                <button class="u-btn u-btn--primary" type="submit" aria-label="Registrar"><span class="material-symbols-rounded u-btn__icono" aria-hidden="true">arrow_forward</span><span class="u-btn__texto">Registrar</span></button>
+            </form>
+            <ul class="u-sugerencias u-sugerencias--checkin" id="sugerencias" hidden></ul>
+            <p class="u-pendientes" id="pendientes" hidden></p>
+
+            <div class="u-camara" id="camara-wrap">
+                <div id="lector-camara"></div>
+                <div class="u-camara__error" id="camara-error"></div>
+            </div>
+
+            <div class="u-resultado" id="resultado" aria-live="polite">
+                <div class="u-resultado__espera" id="espera">
+                    <div class="u-mira" aria-hidden="true"></div>
+                    <strong>Listo para escanear</strong>
+                    Acerca la credencial al lector o a la cámara.
+                </div>
+            </div>
+        </section>
+
+        <section class="u-tablero" aria-label="Llegadas de hoy">
+            <div class="u-tablero__head">
+                <h2 class="u-tablero__titulo">Llegadas de hoy</h2>
+                <span class="u-tablero__total"><span id="total-llegadas">{{ llegadas|length }}</span><small>alumno{{ llegadas|length|pluralize }}</small></span>
+            </div>
+            <ol class="u-tablero__lista" id="tabla-llegadas" reversed>
+                {% for fila in llegadas %}
+                {% with a=fila.asistencia pago=fila.pago %}
+                <li class="u-llegada" data-cliente="{{ a.cliente_id }}">
+                    <span class="u-llegada__hora">{{ a.hora_llegada|time:"H:i" }}</span>
+                    <span>
+                        <a class="u-llegada__nombre" href="{% url 'cliente-ficha' a.cliente_id %}">{{ a.cliente.nombre }} {{ a.cliente.apellido_paterno }} {{ a.cliente.apellido_materno }}</a>
+                        <span class="u-llegada__grupo">{% if a.grupo %}{{ a.grupo }}{% else %}Sin clase{% endif %}</span>
+                    </span>
+                    {% if pago.estado == 'Al corriente' %}<span class="u-llegada__pago p-ok">Al corriente</span>
+                    {% elif pago.estado == 'Por vencer' %}<span class="u-llegada__pago p-warn">Vence en {{ pago.dias }} d</span>
+                    {% elif pago.estado == 'Vencido' %}<span class="u-llegada__pago p-bad">Debe {{ pago.dias }} d</span>
+                    {% else %}<span class="u-llegada__pago p-none">Sin pagos</span>{% endif %}
+                </li>
+                {% endwith %}
+                {% endfor %}
+            </ol>
+            <div class="u-tablero__vacio" id="sin-llegadas" {% if llegadas %}hidden{% endif %}>
+                Todavía no llega nadie. Cada alumno que escanees aparece aquí con su hora.
+            </div>
+        </section>
+    </div>
+</div>
+<div class="u-guia" data-guia role="dialog" aria-modal="true" aria-labelledby="guia-titulo">
+    <div class="u-guia__caja">
+        <section class="u-guia__paso activo">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/checkin_1.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2 id="guia-titulo">1. Escanea la credencial</h2>
+            <p>Pasa la credencial del alumno por el lector: el código se escribe solo y su llegada queda registrada. También puedes usar la cámara o escribir el número.</p>
+            <p>En verde ves que llegó a tiempo y que va al corriente.</p>
+        </section>
+        <section class="u-guia__paso">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/checkin_2.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2>2. Si no va al corriente</h2>
+            <p>Si el alumno debe su mensualidad, sale en rojo: «No va al corriente».</p>
+            <p>Pásalo a recepción para que pague antes de entrar a la alberca.</p>
+        </section>
+        <section class="u-guia__paso">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/checkin_3.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2>3. Retardos y días sin clase</h2>
+            <p>Si llega después de la hora de su grupo, se marca el retardo con los minutos.</p>
+            <p>Si hoy no le toca clase, también te avisa para que lo revises.</p>
+        </section>
+        <section class="u-guia__paso">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/checkin_4.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2>4. Llegadas de hoy</h2>
+            <p>Si el alumno ya había llegado, no se registra dos veces. Abajo está la lista de todos los que llegaron hoy.</p>
+            <p>Para hacer credenciales nuevas usa «Imprimir credenciales».</p>
+        </section>
+    </div>
+</div>
+{% include "posApp/_guia_pasos.html" %}
+{% endblock pageContent %}
+{% block ScriptBlock %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script>
+    $(function() {
+        var $codigo = $('#codigo');
+        var $resultado = $('#resultado');
+        var $espera = $('#espera');
+        var ultimoCodigo = '', ultimaLectura = 0, limpiarTimer = null;
+        var camara = null;
+
+        // El lector funciona como teclado: mantenemos el foco en el campo para que siempre escriba ahí
+        setInterval(function() {
+            if (document.activeElement !== $codigo[0] && !$(document.activeElement).is('a, button, input, select, textarea')) {
+                $codigo.focus();
+            }
+        }, 1000);
+
+        function beep(ok) {
+            try {
+                var ctx = new (window.AudioContext || window.webkitAudioContext)();
+                (ok ? [880] : [330, 0, 330]).forEach(function(freq, i) {
+                    if (!freq) return;
+                    var osc = ctx.createOscillator(), gain = ctx.createGain();
+                    osc.frequency.value = freq;
+                    osc.connect(gain); gain.connect(ctx.destination);
+                    gain.gain.value = 0.2;
+                    osc.start(ctx.currentTime + i * 0.18);
+                    osc.stop(ctx.currentTime + i * 0.18 + 0.15);
+                });
+            } catch (e) {}
+        }
+
+        var CLASES = {'Al corriente': 'ok', 'Por vencer': 'warn', 'Vencido': 'bad'};
+        function clase(pago) { return CLASES[pago.estado] || 'none'; }
+
+        function textoEstado(pago) {
+            if (pago.estado === 'Al corriente') return 'Al corriente';
+            if (pago.estado === 'Por vencer') return pago.dias === 0 ? 'Su pago vence hoy' : 'Su pago vence en ' + pago.dias + ' día' + (pago.dias === 1 ? '' : 's');
+            if (pago.estado === 'Vencido') return 'No va al corriente: debe ' + pago.dias + ' día' + (pago.dias === 1 ? '' : 's');
+            return 'No va al corriente: sin pagos registrados';
+        }
+
+        function textoCorto(pago) {
+            if (pago.estado === 'Al corriente') return 'Al corriente';
+            if (pago.estado === 'Por vencer') return 'Vence en ' + pago.dias + ' d';
+            if (pago.estado === 'Vencido') return 'Debe ' + pago.dias + ' d';
+            return 'Sin pagos';
+        }
+
+        function detallePago(pago) {
+            if (!pago.ultimo_pago) return 'No hay pagos de clases registrados para este alumno.';
+            return pago.concepto + ', pagado el ' + pago.ultimo_pago + (pago.vigente_hasta ? '. Próximo pago el ' + pago.vigente_hasta + '.' : '.');
+        }
+
+
+        function mostrar(claseResultado, $contenido) {
+            $resultado.removeClass('es-ok es-warn es-bad es-none').addClass(claseResultado || '').empty().append($contenido);
+            clearTimeout(limpiarTimer);
+            limpiarTimer = setTimeout(function() {
+                $resultado.removeClass('es-ok es-warn es-bad es-none').empty().append($espera);
+            }, 8000);
+        }
+
+        function mostrarError(msg) {
+            mostrar('es-bad', $('<div class="u-resultado__error">')
+                .append($('<span class="material-symbols-rounded" aria-hidden="true">').text('error'))
+                .append($('<span>').text(msg)));
+        }
+
+        function agregarLlegada(resp) {
+            if (resp.ya_registrado || $('#tabla-llegadas [data-cliente="' + resp.cliente.id + '"]').length) return;
+            $('#sin-llegadas').attr('hidden', true);
+            var $li = $('<li class="u-llegada nueva">').attr('data-cliente', resp.cliente.id);
+            $li.append($('<span class="u-llegada__hora">').text(resp.hora));
+            $li.append($('<span>')
+                .append($('<a class="u-llegada__nombre">').attr('href', resp.cliente.url).text(resp.cliente.nombre))
+                .append($('<span class="u-llegada__grupo">').text(resp.clase || 'Sin clase')));
+            $li.append($('<span class="u-llegada__pago">').addClass('p-' + clase(resp.pago)).text(textoCorto(resp.pago)));
+            $('#tabla-llegadas').prepend($li);
+            $('#total-llegadas').text($('#tabla-llegadas [data-cliente]').length);
+        }
+
+        // Fila de lecturas: cada escaneo se forma y se envía en orden. Se guarda en la tableta para que
+        // no se pierda si se va el internet o se cierra la sesión; se reintenta sola.
+        var CLAVE_FILA = 'checkin-pendientes';
+        var procesando = false;
+
+        function leerFila() {
+            try { return JSON.parse(localStorage.getItem(CLAVE_FILA) || '[]'); } catch (e) { return []; }
+        }
+        function guardarFila(fila) {
+            try { localStorage.setItem(CLAVE_FILA, JSON.stringify(fila)); } catch (e) {}
+            var n = fila.length;
+            $('#pendientes').attr('hidden', !n).text(n + (n === 1 ? ' lectura guardada en la tableta, se enviará sola' : ' lecturas guardadas en la tableta, se enviarán solas'));
+        }
+
+        function mostrarResultado(resp) {
+            var c = clase(resp.pago);
+            beep((c === 'ok' || c === 'warn') && resp.cliente.activo);
+            var $c = $('<div>');
+            $c.append($('<div class="u-resultado__alumno">')
+                .append($('<span class="u-avatar" aria-hidden="true">').text(resp.cliente.iniciales))
+                .append($('<div>')
+                    .append($('<div class="u-resultado__nombre">').text(resp.cliente.nombre))
+                    .append($('<div class="u-resultado__grupo">').text(resp.clase ? 'Clase: ' + resp.clase : resp.cliente.grupo))));
+            $c.append($('<div class="u-resultado__estado">').text(textoEstado(resp.pago)));
+            $c.append($('<div class="u-resultado__detalle">').text(detallePago(resp.pago)));
+            if (!resp.cliente.activo) {
+                $c.append($('<div class="u-resultado__aviso">').text('Este alumno está dado de baja o inactivo en Clientes.'));
+            } else if (resp.minutos_tarde > resp.tolerancia) {
+                $c.append($('<div class="u-resultado__aviso u-resultado__aviso--fuerte">')
+                    .text('Llegó ' + resp.minutos_tarde + ' min tarde a ' + resp.clase + '. Quedó con retardo.'));
+            } else if (!resp.clase) {
+                $c.append($('<div class="u-resultado__aviso' + (resp.sin_clase_hoy && resp.sin_clase_hoy.length ? ' u-resultado__aviso--fuerte' : '') + '">').text(
+                    resp.sin_clase_hoy && resp.sin_clase_hoy.length
+                        ? 'Hoy no le toca clase. Su grupo: ' + resp.sin_clase_hoy.join(', ') + '. Se registró su llegada de todos modos.'
+                    : resp.tiene_grupos
+                        ? 'No tiene clase a esta hora. Se registró su llegada sin grupo.'
+                        : 'No tiene grupo asignado. Agrégalo a uno en Grupos y horarios.'));
+            }
+            if (c === 'bad' || c === 'none') {
+                $c.append($('<div class="u-resultado__cobrar">').text('Pásalo a recepción para que se ponga al corriente.'));
+                if (resp.whatsapp) {
+                    $c.append($('<a class="u-pago__whatsapp" target="whatsapp" rel="noopener">').attr('href', resp.whatsapp)
+                        .append('<span class="material-symbols-rounded" aria-hidden="true">chat</span>').append('Avisar por WhatsApp'));
+                }
+            }
+            $c.append($('<div class="u-resultado__llegada">')
+                .append($('<span>').text(resp.ya_registrado ? 'Ya había llegado hoy' : 'Llegada registrada'))
+                .append($('<span>').text(resp.hora)));
+            mostrar('es-' + c, $c);
+            agregarLlegada(resp);
+        }
+
+        function procesarFila() {
+            var fila = leerFila();
+            if (procesando || !fila.length) return;
+            procesando = true;
+            var lectura = fila[0];
+            $.ajax({
+                headers: {"X-CSRFToken": '{{ csrf_token }}'},
+                url: "{% url 'checkin-registrar' %}",
+                method: 'POST',
+                data: {codigo: lectura.codigo, hora: lectura.hora},
+                dataType: 'json',
+                timeout: 12000
+            }).done(function(resp) {
+                guardarFila(leerFila().slice(1));
+                if (resp.ok) { mostrarResultado(resp); } else { beep(false); mostrarError(resp.msg); }
+                procesando = false;
+                procesarFila();
+            }).fail(function(xhr) {
+                procesando = false;
+                if (xhr.status === 401) {
+                    beep(false);
+                    mostrarError('La sesión se cerró. Vuelve a entrar: las lecturas guardadas se enviarán solas.');
+                } else if (xhr.status === 0 || xhr.status >= 500) {
+                    // Sin internet o falla del servidor: se queda en la fila y se reintenta
+                    mostrarError('Sin conexión. La lectura quedó guardada en la tableta y se enviará sola.');
+                } else {
+                    guardarFila(leerFila().slice(1));
+                    beep(false);
+                    mostrarError((xhr.responseJSON && xhr.responseJSON.msg) || 'No se pudo registrar esta lectura.');
+                    procesarFila();
+                }
+            });
+        }
+
+        function registrar(codigo) {
+            codigo = (codigo || '').trim();
+            if (!codigo) return;
+            // La cámara lee el mismo QR varias veces por segundo: ignoramos repeticiones cercanas
+            var ahora = Date.now();
+            if (codigo === ultimoCodigo && ahora - ultimaLectura < 5000) return;
+            ultimoCodigo = codigo; ultimaLectura = ahora;
+            var fila = leerFila();
+            fila.push({codigo: codigo, hora: new Date().toISOString()});
+            guardarFila(fila);
+            procesarFila();
+        }
+
+        guardarFila(leerFila());
+        procesarFila();
+        setInterval(procesarFila, 15000);
+        window.addEventListener('online', procesarFila);
+
+        // Sin credencial: buscar por nombre en el mismo campo
+        var CODIGO = /^\s*(uri\W?)?\d+\s*$/i;
+        var busqueda = null, resultados = [];
+        function cerrarSugerencias() { $('#sugerencias').attr('hidden', true).empty(); resultados = []; }
+
+        $codigo.on('input', function() {
+            var q = this.value.trim();
+            clearTimeout(busqueda);
+            if (q.length < 3 || CODIGO.test(q)) { cerrarSugerencias(); return; }
+            busqueda = setTimeout(function() {
+                $.getJSON("{% url 'buscar-alumnos' %}", {q: q}, function(resp) {
+                    resultados = resp.resultados;
+                    var $s = $('#sugerencias').empty();
+                    resultados.forEach(function(r) {
+                        $('<li>').append($('<button type="button">')
+                            .append($('<span class="u-avatar">').text(r.iniciales))
+                            .append($('<span>').append($('<b>').text(r.nombre)).append($('<small>').text(r.grupos || 'Sin grupo')))
+                            .on('click', function() {
+                                ultimoCodigo = '';
+                                registrar(String(r.id));
+                                $codigo.val('').focus();
+                                cerrarSugerencias();
+                            })).appendTo($s);
+                    });
+                    if (!resultados.length) $s.append($('<li class="u-sugerencias__vacio">').text('No se encontró a nadie con ese nombre.'));
+                    $s.attr('hidden', false);
+                });
+            }, 300);
+        });
+
+        $('#checkin-form').submit(function(e) {
+            e.preventDefault();
+            var valor = $codigo.val().trim();
+            if (valor && !CODIGO.test(valor)) {
+                // Texto con letras: es una búsqueda por nombre. Con un solo resultado, Enter lo registra
+                if (resultados.length === 1) { $('#sugerencias button').first().click(); }
+                return;
+            }
+            ultimoCodigo = '';  // una lectura manual o del lector siempre se envía
+            registrar(valor);
+            $codigo.val('').focus();
+            cerrarSugerencias();
+        });
+
+        function apagarCamara() {
+            if (camara) {
+                var c = camara;
+                camara = null;
+                c.stop().catch(function() {});
+            }
+            $('#camara-wrap').removeClass('activa');
+        }
+
+        function encenderCamara() {
+            $('#camara-wrap').addClass('activa');
+            $('#camara-error').text('');
+            if (!window.isSecureContext) {
+                $('#camara-error').text('La cámara solo funciona cuando el sistema se abre con https://. Usa el lector o escribe el número.');
+                return;
+            }
+            camara = new Html5Qrcode('lector-camara');
+            camara.start({facingMode: 'environment'}, {fps: 10, qrbox: 240}, registrar)
+                .catch(function(err) {
+                    $('#camara-error').text('No se pudo abrir la cámara. Revisa que el navegador tenga permiso de usarla. (' + err + ')');
+                    camara = null;
+                });
+        }
+
+        $('.u-modo button').click(function() {
+            var modo = $(this).data('modo');
+            $('.u-modo button').removeClass('is-active');
+            $(this).addClass('is-active');
+            if (modo === 'camara') encenderCamara(); else apagarCamara();
+            try { localStorage.setItem('checkin-modo', modo); } catch (e) {}
+            $codigo.focus();
+        });
+
+        try {
+            if (localStorage.getItem('checkin-modo') === 'camara') $('.u-modo [data-modo=camara]').click();
+        } catch (e) {}
+    });
+</script>
+{% endblock ScriptBlock %}

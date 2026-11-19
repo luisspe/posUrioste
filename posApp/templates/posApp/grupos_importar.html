@@ -1,0 +1,41 @@
+{% extends "posApp/base.html" %}
+{% block pageContent %}
+<div class="u-page">
+    <a href="{% url 'grupos' %}" class="u-volver"><span class="material-symbols-rounded" aria-hidden="true">arrow_back</span>Grupos</a>
+    <header class="u-head">
+        <div>
+            <h1 class="u-title">Crear grupos desde horarios</h1>
+            <p class="u-subtitle">Junté a los alumnos activos sin grupo según su horario ("5 pm", "5pm" y "17:00" van juntos). Solo se proponen grupos con {{ minimo }} alumnos o más; el resto se acomoda a mano.</p>
+        </div>
+    </header>
+
+    {% if propuestas %}
+    <form method="POST">
+        {% csrf_token %}
+        <div class="u-panel u-clientes">
+            {% for p in propuestas %}
+            <label class="u-cliente u-propuesta">
+                <input type="checkbox" name="clave" value="{{ p.clave }}" checked class="u-check">
+                <span class="u-grupo__hora">{% if p.hora %}{{ p.hora|time:"H:i" }}{% else %}—{% endif %}</span>
+                <span class="u-cliente__datos">
+                    <input type="text" class="u-input u-propuesta__nombre" name="nombre_{{ p.clave }}" value="{{ p.nombre }}" maxlength="100" aria-label="Nombre del grupo">
+                    <span class="u-pago__detalle">Así lo escribieron: {{ p.ejemplos|join:", " }}</span>
+                </span>
+                <span class="u-grupo__alumnos"><b>{{ p.clientes|length }}</b> alumnos</span>
+            </label>
+            {% endfor %}
+        </div>
+        <div class="u-guardar">
+            <span>Los días se pueden ajustar después en cada grupo. Sin días, el grupo aparece todos los días.</span>
+            <button type="submit" class="u-btn u-btn--primary">Crear grupos seleccionados</button>
+        </div>
+    </form>
+    {% else %}
+    <div class="u-panel u-vacio">
+        <span class="material-symbols-rounded">task_alt</span>
+        <strong>No hay grupos por proponer</strong>
+        Todos los alumnos con horario capturado ya tienen grupo.
+    </div>
+    {% endif %}
+</div>
+{% endblock pageContent %}

@@ -1,0 +1,16 @@
+<section class="u-panel u-seccion u-cm__lista u-cm__lista--{{ clase }}">
+    <h2 class="u-rm__subtitulo">{{ titulo }} <span class="u-pill">{{ filas|length }}</span></h2>
+    <p class="u-dato__nota">{{ ayuda }}</p>
+    {% if filas %}
+    <ul class="u-rm__lista">
+        {% for f in filas %}
+        <li>
+            <a href="{% url 'cliente-ficha' f.id %}">{{ f.nombre }}</a>
+            <span>{% if mostrar_ultimo and f.ultimo %}Último pago {{ f.ultimo|date:"j M"|lower }}{% else %}{{ f.horario }}{% endif %}</span>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="u-vacio">Nadie.</p>
+    {% endif %}
+</section>

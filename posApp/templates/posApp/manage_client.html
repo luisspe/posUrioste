@@ -1,150 +1,195 @@
-<div class="container-fluid">
-    <form action="" id="client-form">
-        <input type="hidden" name="id" value="{% if client.pk %}{{client.pk}}{% endif %}">
-        <div class="form-group mb-3"> 
-            <label for="nombre" class="control-label">Nombre</label>
-            <input type="text" name="nombre" id="nombre" class="form-control form-control-sm rounded-0" value="{% if client.nombre %}{{client.nombre}}{% endif %}" required>
-        </div>
-        <div class="form-group mb-3"> 
-            <label for="apellido_paterno" class="control-label">Apellido Paterno</label>
-            <input type="text" name="apellido_paterno" id="apellido_paterno" class="form-control form-control-sm rounded-0" value="{% if client.apellido_paterno %}{{client.apellido_paterno}}{% endif %}" required>
-        </div>
-        <div class="form-group mb-3"> 
-            <label for="apellido_materno" class="control-label">Apellido Materno</label>
-            <input type="text" name="apellido_materno" id="apellido_materno" class="form-control form-control-sm rounded-0" value="{% if client.apellido_materno %}{{client.apellido_materno}}{% endif %}" required>
-        </div>
-        <div class="form-group mb-3">
-            <label for="genero" class="control-label">Genero </label>
-            <select name="genero_id" id="genero_id" class="form-select form-select-sm rounded-0" required>
-            {% if not client.genero %}
-            <option value="" disabled selected></option>
-            {% else %}
-            <option value="" disabled></option>
-            {% endif %}
-            {% for genero in generos %}
-                {% if client.genero_id == genero.id %}
-                <option value="{{ genero.id }}" selected>{{ genero.genero }}</option>
-                {% else %}
-                <option value="{{ genero.id }}">{{ genero.genero }}</option>
+<form action="" id="client-form" class="u-cf" autocomplete="off">
+    <input type="hidden" name="id" value="{% if client.pk %}{{client.pk}}{% endif %}">
+
+    <div class="u-cf__grid">
+        <fieldset class="u-cf__seccion">
+            <legend><span class="material-symbols-rounded" aria-hidden="true">person</span>Alumno</legend>
+            <div class="u-cf__campos u-cf__campos--3">
+                <label class="u-cf__campo">
+                    <span>Nombre <b aria-hidden="true">*</b></span>
+                    <input type="text" name="nombre" id="nombre" class="u-input" value="{{ client.nombre|default:'' }}" required autocapitalize="words">
+                </label>
+                <label class="u-cf__campo">
+                    <span>Apellido paterno <b aria-hidden="true">*</b></span>
+                    <input type="text" name="apellido_paterno" id="apellido_paterno" class="u-input" value="{{ client.apellido_paterno|default:'' }}" required autocapitalize="words">
+                </label>
+                <label class="u-cf__campo">
+                    <span>Apellido materno <b aria-hidden="true">*</b></span>
+                    <input type="text" name="apellido_materno" id="apellido_materno" class="u-input" value="{{ client.apellido_materno|default:'' }}" required autocapitalize="words">
+                </label>
+            </div>
+            <div class="u-cf__campos u-cf__campos--persona">
+                <div class="u-cf__campo" role="radiogroup" aria-labelledby="genero-etiqueta">
+                    <span id="genero-etiqueta">Género <b aria-hidden="true">*</b></span>
+                    <div class="u-segmentos">
+                        {% for genero in generos %}
+                        <label><input type="radio" name="genero_id" value="{{ genero.id }}"{% if client.genero_id == genero.id %} checked{% endif %}{% if forloop.first %} required{% endif %}><span>{{ genero.genero }}</span></label>
+                        {% endfor %}
+                    </div>
+                </div>
+                <label class="u-cf__campo">
+                    <span>Fecha de nacimiento <small id="edad"></small></span>
+                    <input type="text" name="fecha_nacimiento" id="fecha_nacimiento" class="u-input" value="{{ client.fecha_nacimiento|default:'' }}" placeholder="dd/mm/aaaa" inputmode="numeric" maxlength="10">
+                </label>
+                <label class="u-cf__campo">
+                    <span>Tipo de sangre</span>
+                    <input type="text" name="sangre" id="sangre" class="u-input" value="{{ client.sangre|default:'' }}" list="tipos-sangre" placeholder="O+">
+                </label>
+            </div>
+        </fieldset>
+
+        <fieldset class="u-cf__seccion">
+            <legend><span class="material-symbols-rounded" aria-hidden="true">pool</span>Clases y pago</legend>
+            <div class="u-cf__campos u-cf__campos--2">
+                <label class="u-cf__campo">
+                    <span>Horario</span>
+                    <input type="text" name="horario" id="horario" class="u-input" value="{{ client.horario|default:'' }}" list="lista-horarios" placeholder="Escribe o elige, ej. 17:00 PRINCIPIANTES">
+                    <small class="u-cf__ayuda u-cf__ayuda--ok" id="horario-nota" hidden>Tomado del grupo que elegiste</small>
+                </label>
+                <label class="u-cf__campo">
+                    <span>Día de pago</span>
+                    <input type="text" name="pay_day" id="pay_day" class="u-input" value="{{ client.pay_day|default:'' }}" placeholder="Ej. 5 de cada mes">
+                </label>
+            </div>
+            <div class="u-cf__campo">
+                <span id="grupo-etiqueta">Grupo</span>
+                {% if grupos_cliente %}
+                <div class="u-cf__grupos" aria-label="Grupos actuales">
+                    {% for g in grupos_cliente %}
+                    <label class="u-cf__grupo" title="Toca para sacarlo de este grupo">
+                        <input type="checkbox" name="quitar_grupo" value="{{ g.id }}">
+                        <span>{{ g.nombre }}<span class="material-symbols-rounded" aria-hidden="true">close</span></span>
+                    </label>
+                    {% endfor %}
+                </div>
                 {% endif %}
-            {% endfor %}
-        </select>
-            <div class="form-group mb-3"> 
-                <label for="celular" class="control-label">Celular</label>
-                <input type="text" name="celular" id="celular" class="form-control form-control-sm rounded-0" value="{% if client.celular %}{{client.celular}}{% endif %}">
-            </div>
-            <div class="form-group mb-3">
-                <label for="codigo_postal" class="control-label">Codigo Postal</label>
-                <input type="text" name="codigo_postal" id="codigo_postal" class="form-control form-control-sm rounded-0" value="{% if client.codigo_postal %}{{client.codigo_postal}}{% endif %}">
-            </div>
-            <div class="form-group mb-3">
-                <label for="email" class="control-label">Email</label>
-                <input type="email" name="email" id="email" class="form-control form-control-sm rounded-0" value="{% if client.email %}{{client.email}}{% endif %}">
-            </div>
-            <div class="form-group mb-3">
-                <label for="fecha_nacimiento" class="control-label">Fecha Nacimiento</label>
-                <input type="text" placeholder="dd/mm/yyyy" name="fecha_nacimiento" id="fecha_nacimiento" class="form-control form-control-sm rounded-0" value="{% if client.fecha_nacimiento %}{{client.fecha_nacimiento}}{% endif %}">
-            </div>
-            <div class="form-group mb-3">
-                <label for="contacto_emergencia" class="control-label">Contacto Emergencia</label>
-                <input type="text" name="contacto_emergencia" id="contacto_emergencia" class="form-control form-control-sm rounded-0" value="{% if client.contacto_emergencia %}{{client.contacto_emergencia}}{% endif %}">
-            </div>
-            <div class="form-group mb-3"> 
-                <label for="emergency_phone" class="control-label">Numero de emergencia</label>
-                <input type="text" name="emergency_phone" id="emergency_phone" class="form-control form-control-sm rounded-0" value="{% if client.emergency_phone %}{{client.emergency_phone}}{% endif %}">
-            </div>
-            <div class="form-group mb-3">
-                <label for="sangre" class="control-label">Sangre </label>
-                <input type="text" name="sangre" id="sangre" class="form-control form-control-sm rounded-0" value="{% if client.sangre %}{{client.sangre}}{% endif %}">
-            </div>
-            <div class="form-group mb-3">
-                <label for="pay_day" class="control-label">Dia de pago</label>
-                <input type="text" name="pay_day" id="pay_day" class="form-control form-control-sm rounded-0" value="{% if client.pay_day %}{{client.pay_day}}{% endif %}">
-            </div>
-            
-            <div class="form-group mb-3">
-            <label for="horario" class="control-label">Horario</label>
-            <select name="horario" id="horario" class="form-select form-select-sm rounded-0">
-                {% if not client.horario %}
-                <option value="" disabled selected></option>
+                {% if grupos %}
+                <select name="grupo_id" id="grupo_id" class="u-input" data-combo aria-labelledby="grupo-etiqueta">
+                    <option value="">{% if grupos_cliente %}Agregar a otro grupo{% else %}Elegir grupo{% endif %}</option>
+                    {% for g in grupos %}{% if g not in grupos_cliente %}
+                    <option value="{{ g.id }}">{{ g.nombre }}</option>
+                    {% endif %}{% endfor %}
+                </select>
+                <small class="u-cf__ayuda">Si choca de horario con otro grupo, sale de ese automáticamente.</small>
                 {% else %}
-                <option value="" disabled></option>
+                <small class="u-cf__ayuda">Esta sucursal todavía no tiene grupos. Créalos en <a href="{% url 'grupos' %}">Grupos</a>.</small>
                 {% endif %}
-                {% for horario in horarios %}
-                    {% if client.horario == horario %}
-                    <option value="{{ horario }}" selected>{{ horario }}</option>
-                    {% else %}
-                    <option value="{{ horario }}">{{ horario }}</option>
-                    {% endif %}
-                {% endfor %}
-            </select>
-             </div>
-            <div class="form-group mb-3">
-                <label for="direccion" class="control-label">Direccion</label>
-                <input type="text" name="direccion" id="direccion" class="form-control form-control-sm rounded-0" value="{% if client.direccion %}{{client.direccion}}{% endif %}">
             </div>
-            <div class="form-group mb-3">
-                <label for="suburbio" class="control-label">Colonia</label>
-                <input type="text" name="suburbio" id="suburbio" class="form-control form-control-sm rounded-0" value="{% if client.suburbio %}{{client.suburbio}}{% endif %}">
-            </div>
-            <div class="form-group mb-3">
-                <label for="condicion_medica" class="control-label">Condicion Medica (observaciones)</label>
-                <textarea type="text" name="condicion_medica" id="condicion_medica" class="form-control form-control-sm rounded-0" value="{% if client.condicion_medica %}{{client.condicion_medica}}{% endif %}"></textarea>
-            </div>
-            <div class="form-group mb-3">
-                <label for="plan_inscripcion" class="control-label">Plan de Inscripción</label>
-                <select name="plan_inscripcion" id="plan_inscripcion" class="form-select form-select-sm rounded-0">
-                    {% if not client.plan_inscripcion %}
-                    <option value="" disabled selected></option>
-                    {% else %}
-                    <option value="" disabled></option>
-                    {% endif %}
+            <label class="u-cf__campo">
+                <span>Plan de inscripción</span>
+                <select name="plan_inscripcion" id="plan_inscripcion" class="u-input">
+                    <option value="">Sin plan</option>
                     {% for plan in planes %}
-                        {% if client.plan_inscripcion_id == plan.id %}
-                        <option value="{{ plan.id }}" selected>{{ plan.nombre }}</option>
-                        {% else %}
-                        <option value="{{ plan.id }}">{{ plan.nombre }}</option>
-                        {% endif %}
+                    <option value="{{ plan.id }}"{% if client.plan_inscripcion_id == plan.id %} selected{% endif %}>{{ plan.nombre }}</option>
                     {% endfor %}
                 </select>
-            </div>
-            <div class="form-group mb-3">
-                <label for="status" class="control-label">Status</label>
-                <select name="status" id="status" class="form-select form-select-sm rounded-0" required>
-                    {% if client.status == 1 %}
-                        <option value="1" selected>Activo</option>
-                    {% else %}
-                        <option value="1">Activo</option>
-                    {% endif %}
-                    
-                    {% if client.status == 2 %}
-                        <option value="2" selected>Inactivo</option>
-                    {% else %}
-                        <option value="2">Inactivo</option>
-                    {% endif %}
-                    
-                    {% if client.status == 3 %}
-                        <option value="3" selected>Baja Temporal</option>
-                    {% else %}
-                        <option value="3">Baja Temporal</option>
-                    {% endif %}
-                    
-                    {% if client.status == 4 %}
-                        <option value="4" selected>Baja Definitiva</option>
-                    {% else %}
-                        <option value="4">Baja Definitiva</option>
-                    {% endif %}
-                </select>
+            </label>
+            <div class="u-cf__campo" role="radiogroup" aria-labelledby="status-etiqueta">
+                <span id="status-etiqueta">Situación</span>
+                <div class="u-segmentos u-segmentos--estado">
+                    {% with actual=client.status|default:1 %}
+                    <label><input type="radio" name="status" value="1"{% if actual == 1 %} checked{% endif %} required><span>Activo</span></label>
+                    <label><input type="radio" name="status" value="2"{% if actual == 2 %} checked{% endif %}><span>Inactivo</span></label>
+                    <label><input type="radio" name="status" value="3"{% if actual == 3 %} checked{% endif %}><span>Baja temporal</span></label>
+                    <label><input type="radio" name="status" value="4"{% if actual == 4 %} checked{% endif %}><span>Baja definitiva</span></label>
+                    {% endwith %}
+                </div>
             </div>
             {% if client.pk %}
-            <div class="form-group mb-3">
-                <a href="{% url 'cliente_mensualidades' client.id %}" class="btn btn-info">Ver Estado de Mensualidades</a>
-            </div>
+            <a href="{% url 'cliente-ficha' client.id %}" class="u-cf__enlace">
+                <span class="material-symbols-rounded" aria-hidden="true">assignment_ind</span>Ver ficha, pagos y asistencias
+            </a>
             {% endif %}
-    </form>
-</div>
+        </fieldset>
+
+        <fieldset class="u-cf__seccion">
+            <legend><span class="material-symbols-rounded" aria-hidden="true">call</span>Contacto</legend>
+            <div class="u-cf__campos u-cf__campos--2">
+                <label class="u-cf__campo">
+                    <span>Celular</span>
+                    <input type="tel" name="celular" id="celular" class="u-input" value="{{ client.celular|default:'' }}" inputmode="tel" maxlength="12" placeholder="10 dígitos">
+                </label>
+                <label class="u-cf__campo">
+                    <span>Correo</span>
+                    <input type="email" name="email" id="email" class="u-input" value="{{ client.email|default:'' }}" placeholder="opcional">
+                </label>
+            </div>
+            <div class="u-cf__campos u-cf__campos--direccion">
+                <label class="u-cf__campo">
+                    <span>Dirección</span>
+                    <input type="text" name="direccion" id="direccion" class="u-input" value="{{ client.direccion|default:'' }}">
+                </label>
+                <label class="u-cf__campo">
+                    <span>Colonia</span>
+                    <input type="text" name="suburbio" id="suburbio" class="u-input" value="{{ client.suburbio|default:'' }}">
+                </label>
+                <label class="u-cf__campo">
+                    <span>C.P.</span>
+                    <input type="text" name="codigo_postal" id="codigo_postal" class="u-input" value="{{ client.codigo_postal|default:'' }}" inputmode="numeric" maxlength="10">
+                </label>
+            </div>
+        </fieldset>
+
+        <fieldset class="u-cf__seccion">
+            <legend><span class="material-symbols-rounded" aria-hidden="true">medical_services</span>Emergencia y salud</legend>
+            <div class="u-cf__campos u-cf__campos--2">
+                <label class="u-cf__campo">
+                    <span>Contacto de emergencia</span>
+                    <input type="text" name="contacto_emergencia" id="contacto_emergencia" class="u-input" value="{{ client.contacto_emergencia|default:'' }}" placeholder="Nombre y parentesco">
+                </label>
+                <label class="u-cf__campo">
+                    <span>Teléfono de emergencia</span>
+                    <input type="tel" name="emergency_phone" id="emergency_phone" class="u-input" value="{{ client.emergency_phone|default:'' }}" inputmode="tel" maxlength="20">
+                </label>
+            </div>
+            <label class="u-cf__campo">
+                <span>Condición médica u observaciones</span>
+                <textarea name="condicion_medica" id="condicion_medica" class="u-input" rows="3" placeholder="Alergias, asma, medicamentos, lo que deba saber el instructor">{{ client.condicion_medica|default:'' }}</textarea>
+            </label>
+        </fieldset>
+    </div>
+
+    <datalist id="lista-horarios">
+        {% for horario in horarios %}<option value="{{ horario }}">{% endfor %}
+    </datalist>
+    <datalist id="tipos-sangre">
+        <option value="O+"><option value="O-"><option value="A+"><option value="A-"><option value="B+"><option value="B-"><option value="AB+"><option value="AB-">
+    </datalist>
+</form>
 <script>
         $(function() {
+            // Fecha de nacimiento: se escriben solo los números y las diagonales se ponen solas
+            var $fecha = $('#fecha_nacimiento');
+            function mostrarEdad() {
+                var m = ($fecha.val() || '').match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+                var texto = '';
+                if (m) {
+                    var nacio = new Date(+m[3], +m[2] - 1, +m[1]), hoy = new Date();
+                    var edad = hoy.getFullYear() - nacio.getFullYear() -
+                        ((hoy.getMonth() < nacio.getMonth() || (hoy.getMonth() === nacio.getMonth() && hoy.getDate() < nacio.getDate())) ? 1 : 0);
+                    if (edad >= 0 && edad < 110) texto = edad + (edad === 1 ? ' año' : ' años');
+                }
+                $('#edad').text(texto);
+            }
+            $fecha.on('input', function(e) {
+                if (e.originalEvent && e.originalEvent.inputType && e.originalEvent.inputType.indexOf('delete') === 0) return mostrarEdad();
+                var d = this.value.replace(/\D/g, '').slice(0, 8);
+                this.value = d.length > 4 ? d.slice(0, 2) + '/' + d.slice(2, 4) + '/' + d.slice(4)
+                           : d.length > 2 ? d.slice(0, 2) + '/' + d.slice(2) : d;
+                mostrarEdad();
+            });
+            mostrarEdad();
+            if (window.uCombo) window.uCombo(document.getElementById('client-form'));
+
+            // Al elegir grupo, el horario pasa a ser el del grupo; si se quita la elección, regresa el anterior
+            var horarioOriginal = $('#horario').val();
+            $('#grupo_id').on('change', function() {
+                var elegido = this.value ? this.options[this.selectedIndex].text : '';
+                $('#horario').val(elegido || horarioOriginal);
+                $('#horario-nota').prop('hidden', !elegido);
+            });
+            $('#uni_modal').one('shown.bs.modal', function() { if (!$('#client-form [name=id]').val()) $('#nombre').trigger('focus'); });
+
             $('#client-form').submit(function(e) {
                 e.preventDefault();
                 var _this = $(this)
@@ -180,9 +225,9 @@
                         } else if (resp.status == 'failed' && !!resp.msg) {
                             el.text(resp.msg)
                         } else {
-                            el.text("An error occured", 'error');
+                            el.text("Ocurrió un error al guardar.");
                             end_loader();
-                            console.err(resp)
+                            console.error(resp)
                         }
                         _this.prepend(el)
                         el.show('slow')

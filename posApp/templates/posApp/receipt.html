@@ -83,6 +83,12 @@
                 <div class="col-6 text-start fw-bold">Cambio</div>
                 <div class="col-6 text-end fw-bold">{{ transaction.amount_change }}</div>
             </div>
+            {% if sales.proximo_pago %}
+            <div class="w-100 text-center my-2 py-2 border border-dark">
+                <div class="fw-bold">PRÓXIMO PAGO</div>
+                <div class="fs-5 fw-bold">{{ sales.proximo_pago|date:"l j \d\e F \d\e Y" }}</div>
+            </div>
+            {% endif %}
             <div class="d-flex w-100 align-items-center">
                 {% if sales %}
                 <div class="col-6 text-start fw-bold">Comentario</div>

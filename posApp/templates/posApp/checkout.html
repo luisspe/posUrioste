@@ -40,7 +40,7 @@
         $('#checkout-form').submit(function(e) {
             e.preventDefault();
             if ($('[name="amount_change"]').val() < 0) {
-                alert("Tendered Amount is lower that Payable Amount")
+                alert("Lo recibido es menos que el total a pagar.")
                 return false;
             }
             $('#pos-form').submit()

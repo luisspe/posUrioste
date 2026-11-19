@@ -1,0 +1,47 @@
+{% extends "posApp/base.html" %}
+{% block pageContent %}
+<div class="u-page">
+    <a href="{% url 'grupos' %}" class="u-volver"><span class="material-symbols-rounded" aria-hidden="true">arrow_back</span>Grupos</a>
+    <header class="u-head">
+        <div>
+            <h1 class="u-title">Crear grupos desde productos</h1>
+            <p class="u-subtitle">Cada producto de clase cuyo nombre dice la hora se vuelve un grupo con esos días y esa hora, ligado al producto. Al cobrarlo, el alumno entra al grupo y sale del grupo que tenía a la misma hora. Los que nadie ha comprado en {{ dias_compra }} días quedan sin marcar.</p>
+        </div>
+    </header>
+
+    {% if propuestas %}
+    <form method="POST">
+        {% csrf_token %}
+        <div class="u-panel u-clientes">
+            {% for p in propuestas %}
+            <label class="u-cliente u-propuesta">
+                <input type="checkbox" name="clave" value="{{ p.clave }}" {% if p.clientes %}checked{% endif %} class="u-check">
+                <span class="u-grupo__hora">{{ p.hora|time:"H:i" }}</span>
+                <span class="u-cliente__datos">
+                    <input type="text" class="u-input u-propuesta__nombre" name="nombre_{{ p.clave }}" value="{{ p.nombre }}" maxlength="100" aria-label="Nombre del grupo">
+                    <span class="u-alumno__tags">
+                        <span class="u-tag">{{ p.dias_texto }}</span>
+                        {% for producto in p.productos %}<span class="u-tag u-tag--proximo">{{ producto.name }}</span>{% endfor %}
+                    </span>
+                </span>
+                <span class="u-grupo__alumnos"><b>{{ p.clientes|length }}</b> alumno{{ p.clientes|length|pluralize }}</span>
+            </label>
+            {% endfor %}
+        </div>
+        <div class="u-guardar">
+            <label class="u-check-linea">
+                <input type="checkbox" name="inscribir" value="1" checked class="u-check">
+                Inscribir ya a los {{ total_alumnos }} alumnos activos que los compraron en los últimos {{ dias_compra }} días
+            </label>
+            <button type="submit" class="u-btn u-btn--primary">Crear grupos seleccionados</button>
+        </div>
+    </form>
+    {% else %}
+    <div class="u-panel u-vacio">
+        <span class="material-symbols-rounded">task_alt</span>
+        <strong>No hay productos por convertir</strong>
+        Todos los productos de clase con hora en el nombre ya tienen grupo. Solo se consideran los productos con "días de clases que cubre".
+    </div>
+    {% endif %}
+</div>
+{% endblock pageContent %}

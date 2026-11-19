@@ -1,0 +1,326 @@
+{% extends "posApp/base.html" %}
+{% load static %}
+{% block pageContent %}
+<div class="u-page">
+    <header class="u-head">
+        <div>
+            <h1 class="u-title">Pase de lista</h1>
+            <p class="u-subtitle">{% if es_hoy %}Hoy, {% endif %}{{ fecha|date:"l j \d\e F"|lower }}</p>
+        </div>
+        <form method="GET" class="u-fecha" aria-label="Cambiar fecha">
+            <a class="u-btn u-btn--ghost u-btn--icon" title="Día anterior" href="?fecha={{ dia_anterior|date:'Y-m-d' }}">
+                <span class="material-symbols-rounded">chevron_left</span>
+            </a>
+            <input type="date" name="fecha" value="{{ fecha|date:'Y-m-d' }}" class="u-input" onchange="this.form.submit()" aria-label="Fecha">
+            <a class="u-btn u-btn--ghost u-btn--icon" title="Día siguiente" href="?fecha={{ dia_siguiente|date:'Y-m-d' }}">
+                <span class="material-symbols-rounded">chevron_right</span>
+            </a>
+            {% if not es_hoy %}<a class="u-btn u-btn--ghost" href="?">Hoy</a>{% endif %}
+            <button type="button" class="u-btn u-btn--ghost" data-guia-abrir>
+                <span class="material-symbols-rounded" aria-hidden="true">help</span>¿Cómo funciona?
+            </button>
+        </form>
+    </header>
+
+    {% if not hay_grupos %}
+    <div class="u-panel u-vacio">
+        <span class="material-symbols-rounded">diversity_3</span>
+        <strong>Primero arma los grupos</strong>
+        El pase de lista se hace por clase. Puedes crear los grupos en un minuto a partir de los horarios que ya tienen tus alumnos.
+        <p class="mt-3"><a class="u-btn u-btn--primary" href="{% url 'grupos' %}">Ir a Grupos</a></p>
+    </div>
+    {% else %}
+
+    <nav class="u-clases" aria-label="Clases del día">
+        {% for g in grupos_dia %}
+        <a class="u-clase{% if grupo and g.id == grupo.id %} is-active{% endif %}{% if g.es_en_curso %} es-ahora{% endif %}" href="?fecha={{ fecha|date:'Y-m-d' }}&grupo={{ g.id }}"{% if grupo and g.id == grupo.id %} aria-current="page"{% endif %}>
+            <span class="u-clase__hora">{% if g.hora_inicio %}{{ g.hora_inicio|time:"H:i" }}{% else %}Sin hora{% endif %}</span>
+            <span class="u-clase__nombre">{{ g.nombre }}</span>
+            <span class="u-clase__cuenta">{% if g.es_en_curso %}<b>Ahora</b> · {% endif %}{{ g.llegaron }} de {{ g.alumnos }}</span>
+        </a>
+        {% empty %}
+        <p class="u-dato__nota">No hay clases este día. Revisa los días de cada grupo en Grupos.</p>
+        {% endfor %}
+    </nav>
+
+    {% if sin_clase %}
+    <details class="u-panel u-sin-clase">
+        <summary>
+            <span class="material-symbols-rounded" aria-hidden="true">qr_code_scanner</span>
+            <span><b>{{ sin_clase|length }}</b> llegaron sin clase este día</span>
+            <small>Pasaron el QR, pero a su grupo no le toca hoy. No salen en las listas de abajo.</small>
+        </summary>
+        <ul>
+            {% for a in sin_clase %}
+            <li>
+                <span class="u-sin-clase__hora">{{ a.hora_llegada|time:"H:i"|default:"—" }}</span>
+                <a href="{% url 'cliente-ficha' a.cliente_id %}">{{ a.cliente.nombre }} {{ a.cliente.apellido_paterno }}</a>
+                <span class="u-sin-clase__horario">{{ a.cliente.horario }}</span>
+                {% include "posApp/_estado_pago.html" with pago=a.pago cliente=a.cliente %}
+            </li>
+            {% endfor %}
+        </ul>
+    </details>
+    {% endif %}
+
+    {% if not grupo %}
+    <div class="u-panel u-vacio">
+        <span class="material-symbols-rounded">touch_app</span>
+        <strong>Elige la clase</strong>
+        {% if es_hoy %}No hay ninguna clase empezando ahorita. Toca una de arriba para pasar lista.{% else %}Toca una de las clases de arriba para ver o corregir su lista.{% endif %}
+    </div>
+    {% else %}
+
+    <section class="u-panel u-clase-actual">
+        <div>
+            <h2 class="u-clase-actual__titulo">{{ grupo.nombre }}</h2>
+            <p class="u-dato__nota">{{ grupo.dias_texto }}{% if grupo.hora_inicio %}, {{ grupo.hora_inicio|time:"H:i" }}{% endif %}{% if grupo.nivel %}. {{ grupo.nivel }}{% endif %}</p>
+        </div>
+        <div class="u-resumen__cifras">
+            <span><b id="cuenta-asistieron">{{ resumen.presentes }}</b>de {{ resumen.total }} llegaron</span>
+            <span><b id="cuenta-pendientes">{{ resumen.sin_marcar }}</b>sin marcar</span>
+            <span class="{% if resumen.con_adeudo %}es-adeudo{% endif %}"><b>{{ resumen.con_adeudo }}</b>con adeudo</span>
+            {% if resumen.tarde %}<span class="es-tarde"><b>{{ resumen.tarde }}</b>llegaron tarde</span>{% endif %}
+        </div>
+        <div class="u-barra" id="barra" role="img" aria-label="Avance del pase de lista">
+            {% for estado, pct in resumen.barra %}<span class="b-{{ estado }}" style="width: {{ pct|floatformat:'2u' }}%"></span>{% endfor %}
+        </div>
+    </section>
+
+    <div class="u-buscador__campo u-agregar">
+        <span class="material-symbols-rounded" aria-hidden="true">person_add</span>
+        <input type="search" id="buscar-alumno" placeholder="Agregar alumno de otro grupo" autocomplete="off" aria-label="Agregar alumno a esta clase">
+        <ul class="u-sugerencias" id="sugerencias" hidden></ul>
+    </div>
+
+    {% if filas %}
+    <div class="u-panel u-lista" id="lista">
+        {% for fila in filas %}
+        {% with c=fila.cliente a=fila.asistencia %}
+        <div class="u-alumno{% if fila.pago.estado == 'Vencido' or fila.pago.estado == 'Sin pagos' %} debe{% elif fila.pago.estado == 'Por vencer' %} por-vencer{% endif %}" data-cliente="{{ c.pk }}"
+             data-nombre="{{ c.nombre }}"{% if fila.pago.estado == 'Vencido' %} data-adeudo="debe {{ fila.pago.dias }} día{{ fila.pago.dias|pluralize }}"{% elif fila.pago.estado == 'Sin pagos' %} data-adeudo="no tiene pagos registrados"{% endif %}>
+            <div class="u-alumno__quien">
+                <span class="u-avatar" aria-hidden="true">{{ c.iniciales }}</span>
+                <div>
+                    <a class="u-alumno__nombre" href="{% url 'cliente-ficha' c.pk %}">{{ c.nombre }} {{ c.apellido_paterno }} {{ c.apellido_materno }}</a>
+                    <div class="u-alumno__tags">
+                        {% if fila.invitado %}<span class="u-tag u-tag--proximo">De otro grupo</span>{% endif %}
+                        {% if c.nivel %}<span class="u-tag">{{ c.nivel }}</span>{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div>{% include "posApp/_estado_pago.html" with pago=fila.pago cliente=c %}</div>
+
+            <div class="u-alumno__acciones">
+                <div class="u-marcar" role="radiogroup" aria-label="Asistencia de {{ c.nombre }}">
+                    {% for valor, etiqueta in estados_asistencia %}
+                    <input type="radio" name="estado_{{ c.pk }}" id="estado_{{ c.pk }}_{{ valor }}" value="{{ valor }}" autocomplete="off" {% if a and a.estado == valor %}checked{% endif %}>
+                    <label for="estado_{{ c.pk }}_{{ valor }}">{{ etiqueta }}</label>
+                    {% endfor %}
+                    <input type="radio" name="estado_{{ c.pk }}" id="estado_{{ c.pk }}_none" value="" autocomplete="off" {% if not a %}checked{% endif %}>
+                    <label for="estado_{{ c.pk }}_none" title="Quitar registro"><span class="material-symbols-rounded">remove</span></label>
+                </div>
+                <div class="u-alumno__extra">
+                    <span class="u-guardado" aria-live="polite"></span>
+                    {% if a.hora_llegada %}<span{% if fila.es_tarde %} class="u-tarde"{% endif %}>Llegó {{ a.hora_llegada|time:"H:i" }} con QR{% if fila.es_tarde %}, {{ fila.tarde }} min tarde{% endif %}</span>{% endif %}
+                    <button type="button" class="u-nota-btn" data-nota="{{ c.pk }}">{% if a.comentario %}Ver nota{% else %}Agregar nota{% endif %}</button>
+                </div>
+            </div>
+
+            <div class="u-nota{% if a.comentario %} abierta{% endif %}" id="nota-{{ c.pk }}">
+                <input type="text" value="{{ a.comentario|default:'' }}" maxlength="200" class="u-input" data-cliente="{{ c.pk }}" placeholder="Nota para este día, por ejemplo: avisó que está enfermo">
+            </div>
+        </div>
+        {% endwith %}
+        {% endfor %}
+    </div>
+
+    <div class="u-guardar">
+        <span class="u-guardar__estado" id="estado-guardar">Se guarda solo al tocar</span>
+        <div class="d-flex gap-2 flex-wrap">
+            <button type="button" class="u-btn u-btn--ghost" id="todos-presentes" title="Marca presentes a los que no tienen registro">Todos presentes</button>
+            <button type="button" class="u-btn u-btn--primary" id="cerrar-lista">Cerrar y marcar faltas</button>
+        </div>
+    </div>
+    {% else %}
+    <div class="u-panel u-vacio">
+        <span class="material-symbols-rounded">group_off</span>
+        <strong>Este grupo no tiene alumnos activos</strong>
+        Agrégalos desde <a href="{% url 'grupo-editar' grupo.id %}">el grupo</a> o con el buscador de arriba.
+    </div>
+    {% endif %}
+    {% endif %}
+    {% endif %}
+</div>
+
+<div class="u-guia" data-guia role="dialog" aria-modal="true" aria-labelledby="guia-titulo">
+    <div class="u-guia__caja">
+        <section class="u-guia__paso activo">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/pase_lista_1.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2 id="guia-titulo">1. Elige la clase</h2>
+            <p>Arriba salen las clases que tocan hoy, por hora. La que está por empezar o acaba de empezar dice <strong>Ahora</strong> y se abre sola.</p>
+            <p>Cada clase dice cuántos llegaron, por ejemplo <strong>2 de 8</strong>. Para pasar lista de otro día, cambia la fecha con las flechas.</p>
+        </section>
+        <section class="u-guia__paso">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/pase_lista_2.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2>2. Marca a cada alumno</h2>
+            <p>Toca <strong>Presente</strong>, <strong>Falta</strong>, <strong>Retardo</strong> o <strong>Justificada</strong>. Se guarda al tocar: no hay botón de guardar.</p>
+            <p>Si te equivocaste, toca la opción correcta y se cambia. Arriba ves cuántos llegaron y cuántos faltan por marcar.</p>
+        </section>
+        <section class="u-guia__paso">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/pase_lista_3.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2>3. Quién no va al corriente</h2>
+            <p>Los que deben tienen la orilla roja y dicen <strong>Debe X días</strong> o <strong>Sin pagos</strong>.</p>
+            <p>Al marcarlos presentes sale un aviso rojo: pásalos a recepción para que se pongan al corriente.</p>
+        </section>
+        <section class="u-guia__paso">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/pase_lista_4.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2>4. Los que pasaron su QR</h2>
+            <p>Quien pasó su credencial en el <strong>Check-in</strong> ya aparece presente en su clase, con la hora. Si llegó más de 10 minutos tarde queda con <strong>retardo</strong> y lo dice en amarillo.</p>
+            <p>Si alguien pasó el QR un día que no le toca, sale arriba en <strong>Llegaron sin clase este día</strong>.</p>
+        </section>
+        <section class="u-guia__paso">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/pase_lista_5.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2>5. Alumnos de otro grupo y notas</h2>
+            <p>Si viene alguien a reponer clase, búscalo en <strong>Agregar alumno de otro grupo</strong> y queda presente en esta clase.</p>
+            <p>Con <strong>Agregar nota</strong> anotas algo del día, por ejemplo "avisó que sale temprano". Primero marca su asistencia y luego la nota.</p>
+        </section>
+        <section class="u-guia__paso">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/pase_lista_6.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2>6. Termina la lista</h2>
+            <p><strong>Todos presentes</strong> marca presentes a los que faltan por marcar.</p>
+            <p><strong>Cerrar y marcar faltas</strong> pone falta a los que no llegaron. Antes te pregunta cuántos son para que lo confirmes.</p>
+        </section>
+    </div>
+</div>
+{% include "posApp/_guia_pasos.html" %}
+{% endblock pageContent %}
+{% block ScriptBlock %}
+{% if grupo %}
+<script>
+    $(function() {
+        var FECHA = '{{ fecha|date:"Y-m-d" }}', GRUPO = '{{ grupo.id }}', CSRF = '{{ csrf_token }}';
+        var $lista = $('#lista');
+        var pendientesDeGuardar = 0;
+
+        function avisar(texto, clase) {
+            $('#estado-guardar').removeClass('hay-cambios es-error').addClass(clase || '').text(texto);
+        }
+
+        function enviar(url, datos) {
+            return $.ajax({url: url, method: 'POST', dataType: 'json',
+                           data: $.extend({csrfmiddlewaretoken: CSRF, fecha: FECHA, grupo: GRUPO}, datos)});
+        }
+
+        function mensajeError(xhr) {
+            if (xhr.status === 401) return 'La sesión se cerró. Recarga la página y vuelve a entrar.';
+            if (xhr.responseJSON && xhr.responseJSON.msg) return xhr.responseJSON.msg;
+            return 'Sin conexión. Toca otra vez para reintentar.';
+        }
+
+        function actualizarConteo() {
+            var total = $lista.find('.u-alumno').length;
+            var conteo = {P: 0, R: 0, F: 0, J: 0, '': 0};
+            $lista.find('input[type=radio]:checked').each(function() { conteo[this.value]++; });
+            ['P', 'R', 'F', 'J'].forEach(function(e) {
+                $('#barra .b-' + e).css('width', (total ? conteo[e] * 100 / total : 0) + '%');
+            });
+            $('#cuenta-asistieron').text(conteo.P + conteo.R);
+            $('#cuenta-pendientes').text(conteo['']);
+        }
+
+        // Al marcar que llegó un alumno que no va al corriente, se avisa para cobrarle
+        var $aviso = $('<div class="u-toast" role="status" aria-live="polite" hidden>').appendTo('body'), avisoTimer;
+        function avisarAdeudo($fila) {
+            $aviso.empty()
+                .append($('<span class="material-symbols-rounded" aria-hidden="true">').text('warning'))
+                .append($('<span>').append($('<b>').text($fila.data('nombre') + ' no va al corriente'))
+                                   .append(document.createTextNode(': ' + $fila.data('adeudo') + '. Pásalo a recepción.')))
+                .prop('hidden', false);
+            clearTimeout(avisoTimer);
+            avisoTimer = setTimeout(function() { $aviso.prop('hidden', true); }, 6000);
+        }
+
+        // Cada toque se guarda al momento
+        $lista.on('change', 'input[type=radio]', function() {
+            var $fila = $(this).closest('.u-alumno'), $ok = $fila.find('.u-guardado');
+            if ((this.value === 'P' || this.value === 'R') && $fila.data('adeudo')) avisarAdeudo($fila);
+            actualizarConteo();
+            pendientesDeGuardar++;
+            $ok.removeClass('es-error').text('Guardando…');
+            avisar('Guardando…', 'hay-cambios');
+            enviar("{% url 'asistencia-marcar' %}", {cliente: $fila.data('cliente'), estado: this.value})
+                .done(function() {
+                    $ok.text('Guardado');
+                    setTimeout(function() { if ($ok.text() === 'Guardado') $ok.text(''); }, 1800);
+                })
+                .fail(function(xhr) { $ok.addClass('es-error').text(mensajeError(xhr)); })
+                .always(function() {
+                    pendientesDeGuardar--;
+                    if (!pendientesDeGuardar) {
+                        var errores = $lista.find('.u-guardado.es-error').length;
+                        avisar(errores ? errores + ' sin guardar. Revisa la conexión y vuelve a tocar.' : 'Todo guardado',
+                               errores ? 'es-error' : '');
+                    }
+                });
+        });
+
+        $lista.on('change', '.u-nota input', function() {
+            var $input = $(this), $ok = $input.closest('.u-alumno').find('.u-guardado');
+            enviar("{% url 'asistencia-marcar' %}", {cliente: $input.data('cliente'), comentario: this.value})
+                .done(function() { $ok.removeClass('es-error').text('Nota guardada'); })
+                .fail(function(xhr) { $ok.addClass('es-error').text(mensajeError(xhr)); });
+        });
+
+        $('.u-nota-btn').click(function() {
+            var $nota = $('#nota-' + $(this).data('nota')).toggleClass('abierta');
+            if ($nota.hasClass('abierta')) $nota.find('input').focus();
+        });
+
+        function marcarPendientes(estado, confirmacion) {
+            var pendientes = $lista.find('input[type=radio][value=""]:checked').length;
+            if (!pendientes) { avisar('No hay alumnos sin marcar'); return; }
+            if (confirmacion && !confirm(confirmacion.replace('{n}', pendientes))) return;
+            avisar('Guardando…', 'hay-cambios');
+            enviar("{% url 'asistencia-marcar-pendientes' %}", {estado: estado})
+                .done(function() { location.reload(); })
+                .fail(function(xhr) { avisar(mensajeError(xhr), 'es-error'); });
+        }
+        $('#todos-presentes').click(function() { marcarPendientes('P'); });
+        $('#cerrar-lista').click(function() {
+            marcarPendientes('F', 'Se marcará falta a los {n} alumnos que no tienen registro. ¿Cerrar la lista?');
+        });
+
+        $(window).on('beforeunload', function() {
+            if (pendientesDeGuardar) return 'Todavía se está guardando';
+        });
+
+        // Alumnos de otros grupos que vinieron a esta clase
+        var timer = null;
+        $('#buscar-alumno').on('input', function() {
+            var q = this.value.trim();
+            clearTimeout(timer);
+            if (q.length < 2) { $('#sugerencias').attr('hidden', true).empty(); return; }
+            timer = setTimeout(function() {
+                $.getJSON("{% url 'buscar-alumnos' %}", {q: q}, function(resp) {
+                    var $s = $('#sugerencias').empty();
+                    resp.resultados.forEach(function(r) {
+                        $('<li>').append($('<button type="button">')
+                            .append($('<span class="u-avatar">').text(r.iniciales))
+                            .append($('<span>').append($('<b>').text(r.nombre)).append($('<small>').text(r.grupos || 'Sin grupo')))
+                            .on('click', function() {
+                                enviar("{% url 'asistencia-marcar' %}", {cliente: r.id, estado: 'P'})
+                                    .done(function() { location.reload(); })
+                                    .fail(function(xhr) { alert(mensajeError(xhr)); });
+                            })).appendTo($s);
+                    });
+                    if (!resp.resultados.length) $s.append($('<li class="u-sugerencias__vacio">').text('No se encontró a nadie con ese nombre.'));
+                    $s.attr('hidden', false);
+                });
+            }, 250);
+        });
+    });
+</script>
+{% endif %}
+{% endblock ScriptBlock %}

@@ -1,0 +1,19 @@
+{% if page_obj.paginator.num_pages > 1 %}
+<nav class="u-paginas" aria-label="Páginas">
+    {% if page_obj.has_previous %}
+    <a class="u-btn u-btn--ghost u-btn--icon" href="?{{ query_params }}&page={{ page_obj.previous_page_number }}" title="Página anterior" aria-label="Página anterior"><span class="material-symbols-rounded">chevron_left</span></a>
+    {% endif %}
+    {% for numero in paginas %}
+        {% if numero == elipsis %}
+        <span class="u-paginas__elipsis">…</span>
+        {% elif numero == page_obj.number %}
+        <span class="u-paginas__numero is-active" aria-current="page">{{ numero }}</span>
+        {% else %}
+        <a class="u-paginas__numero" href="?{{ query_params }}&page={{ numero }}">{{ numero }}</a>
+        {% endif %}
+    {% endfor %}
+    {% if page_obj.has_next %}
+    <a class="u-btn u-btn--ghost u-btn--icon" href="?{{ query_params }}&page={{ page_obj.next_page_number }}" title="Página siguiente" aria-label="Página siguiente"><span class="material-symbols-rounded">chevron_right</span></a>
+    {% endif %}
+</nav>
+{% endif %}

@@ -3,7 +3,8 @@
 <header class="mdc-top-app-bar border-bottom shadow">
     <div class="mdc-top-app-bar__row">
         <div class="mdc-top-app-bar__section mdc-top-app-bar__section--align-start">
-            <button class="material-icons mdc-top-app-bar__navigation-icon mdc-icon-button sidebar-toggler">menu</button>
+            <button class="material-icons mdc-top-app-bar__navigation-icon mdc-icon-button sidebar-toggler" aria-label="Abrir menú">menu</button>
+            <span class="u-topbar__titulo">{{ page_title|default:"Acuática Urioste" }}</span>
         </div>
         <div class="mdc-top-app-bar__section mdc-top-app-bar__section--align-end mdc-top-app-bar__section-right">
             <div class="menu-button-container menu-profile d-none d-md-block">

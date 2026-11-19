@@ -1,91 +1,89 @@
-{% load static %}
-<!-- partial:partials/_sidebar.html -->
-<aside class="mdc-drawer mdc-drawer--dismissible mdc-drawer--open" style="background-color:#081552 ;">
-    <div class="mdc-drawer__header border-bottom border-light">
-        <a href="{% url 'home-page' %}" class="brand-logo">
-            
+<aside class="mdc-drawer mdc-drawer--dismissible mdc-drawer--open u-sidebar">
+    <div class="mdc-drawer__header u-sidebar__top">
+        <a href="{% url 'home-page' %}" class="u-sidebar__brand">
             {% if user_profile.sucursal|lower == "acuática modelo" %}
-                <img style="display: block; margin: 0 auto; max-width: 200px; height: auto;" src="https://i.ibb.co/b5J08rVD/e29776b3-29f4-4325-878c-916fed80c2c2.jpg" alt="e29776b3-29f4-4325-878c-916fed80c2c2" border="0">
-            
+                <img class="u-sidebar__logo" src="https://i.ibb.co/b5J08rVD/e29776b3-29f4-4325-878c-916fed80c2c2.jpg" alt="">
             {% else %}
-                <img style="display: block; margin: 0 auto; max-width: 150px; height: auto;" src="https://static.wixstatic.com/media/7dbb81_b3104a39f3ed47ae8c62b057b5437929~mv2.png/v1/fill/w_411,h_411,al_c,q_85,usm_0.66_1.00_0.01,enc_auto/313400177_487585436739361_7975272688749260606_n.png" alt="">
+                <img class="u-sidebar__logo" src="https://static.wixstatic.com/media/7dbb81_b3104a39f3ed47ae8c62b057b5437929~mv2.png/v1/fill/w_411,h_411,al_c,q_85,usm_0.66_1.00_0.01,enc_auto/313400177_487585436739361_7975272688749260606_n.png" alt="">
             {% endif %}
+            <span>
+                <span class="u-sidebar__name">Acuática Urioste</span>
+                <span class="u-sidebar__sucursal">{{ request.session.sucursal_nombre|default:user_profile.sucursal|default:"Sin sucursal" }}</span>
+            </span>
         </a>
+        <button type="button" class="u-sidebar__cerrar" aria-label="Cerrar menú">
+            <span class="material-symbols-rounded" aria-hidden="true">close</span>
+        </button>
     </div>
-    
-    {{user_profile.sucursal}}
-    <div class="mdc-drawer__content">
-        <div class="mdc-list-group">
-            <nav class="mdc-list mdc-drawer-menu">
-                <div class="mdc-list-item mdc-drawer-item">
-                    <a class="mdc-drawer-link" href="{% url 'home-page' %}">
-                        <i class="material-icons mdc-list-item__start-detail mdc-drawer-item-icon" aria-hidden="true">home</i> Home
-                    </a>
-                </div>
-                <div class="mdc-list-item mdc-drawer-item">
-                    <a class="mdc-drawer-link" href="{% url 'client-page' %}">
-                        <i class="material-icons mdc-list-item__start-detail mdc-drawer-item-icon" aria-hidden="true">home</i> Clientes
-                    </a>
-                </div>
-                <div class="mdc-list-item mdc-drawer-item">
-                    <a class="mdc-drawer-link" href="{% url 'category-page' %}">
-                        <i class="material-icons mdc-list-item__start-detail mdc-drawer-item-icon" aria-hidden="true">list</i> Categorias
-                    </a>
-                </div>
-                {% if user_profile and user_profile.is_manager %}
-                    {% if not user_profile.is_modelo_manager %}
-                        <div class="mdc-list-item mdc-drawer-item">
-                            <a class="mdc-drawer-link" href="{% url 'cambiar-sucursal' %}">
-                                <i class="material-icons mdc-list-item__start-detail mdc-drawer-item-icon" aria-hidden="true">label</i> Cambiar Sucursal
-                            </a>
-                        </div>
-                        <div class="mdc-list-item mdc-drawer-item">
-                            <a class="mdc-drawer-link" href="{% url 'create_sucursal' %}">
-                                <i class="material-icons mdc-list-item__start-detail mdc-drawer-item-icon" aria-hidden="true">business</i> Crear Sucursal
-                            </a>
-                        </div>
-                    {% endif %}
-                    <div class="mdc-list-item mdc-drawer-item">
-                        <a class="mdc-drawer-link" href="{% url 'monthly_report' %}">
-                            <i class="material-icons mdc-list-item__start-detail mdc-drawer-item-icon" aria-hidden="true">label</i> Ver Graficos de ventas
-                        </a>
-                    </div>
 
+    <nav class="mdc-drawer__content u-sidebar__content" aria-label="Menú principal">
+        {% include "posApp/_nav_link.html" with name="home-page" icon="home" label="Inicio" %}
 
-                {% endif %}
-                <div class="mdc-list-item mdc-drawer-item">
-                    <a class="mdc-drawer-link" href="{% url 'product-page' %}">
-                        <i class="material-icons mdc-list-item__start-detail mdc-drawer-item-icon" aria-hidden="true">label</i> Productos Y Entradas
-                    </a>
-                </div>
-                <div class="mdc-list-item mdc-drawer-item">
-                    <a class="mdc-drawer-link" href="{% url 'add_salida' %}">
-                        <i class="material-icons mdc-list-item__start-detail mdc-drawer-item-icon" aria-hidden="true">exit_to_app</i> Agregar Salidas
-                    </a>
-                </div>
-                
-                <div class="mdc-list-item mdc-drawer-item">
-                    <a class="mdc-drawer-link" href="{% url 'create_plan_inscripcion' %}">
-                        <i class="material-icons mdc-list-item__start-detail mdc-drawer-item-icon" aria-hidden="true">event_note</i> Agregar Planes
-                    </a>
-                </div>
-                <div class="mdc-list-item mdc-drawer-item">
-                    <a class="mdc-drawer-link" href="{% url 'plans-page' %}">
-                        <i class="material-icons mdc-list-item__start-detail mdc-drawer-item-icon" aria-hidden="true">event_note</i> Ver y Eliminar Planes
-                    </a>
-                </div>
-                <div class="mdc-list-item mdc-drawer-item">
-                    <a class="mdc-drawer-link" href="{% url 'pos-page' %}">
-                        <i class="material-icons mdc-list-item__start-detail mdc-drawer-item-icon" aria-hidden="true">payment</i> Punto de Venta
-                    </a>
-                </div>
-                <div class="mdc-list-item mdc-drawer-item">
-                    <a class="mdc-drawer-link" href="{% url 'sales-page' %}">
-                        <i class="material-icons mdc-list-item__start-detail mdc-drawer-item-icon" aria-hidden="true">receipt</i> Reportes
-                    </a>
-                </div>
-            </nav>
-        </div>
+        <p class="u-nav__group">Alumnos</p>
+        {% include "posApp/_nav_link.html" with name="client-page" icon="groups" label="Clientes" %}
+        {% include "posApp/_nav_link.html" with name="checkin" icon="qr_code_scanner" label="Check-in QR" %}
+        {% include "posApp/_nav_link.html" with name="pase-lista" icon="fact_check" label="Pase de lista" %}
+        {% include "posApp/_nav_link.html" with name="reporte-asistencia" icon="event_available" label="Reporte de asistencia" %}
+        {% include "posApp/_nav_link.html" with name="grupos" icon="diversity_3" label="Grupos y horarios" %}
+
+        <p class="u-nav__group">Ventas</p>
+        {% include "posApp/_nav_link.html" with name="pos-page" icon="point_of_sale" label="Punto de venta" %}
+        {% include "posApp/_nav_link.html" with name="sales-page" icon="receipt_long" label="Reportes de venta" %}
+        {% include "posApp/_nav_link.html" with name="add_salida" icon="output" label="Registrar salida" %}
+
+        <p class="u-nav__group">Catálogo</p>
+        {% include "posApp/_nav_link.html" with name="product-page" icon="inventory_2" label="Productos y entradas" %}
+        {% include "posApp/_nav_link.html" with name="category-page" icon="category" label="Categorías" %}
+        {% include "posApp/_nav_link.html" with name="plans-page" icon="card_membership" label="Planes" %}
+        {% include "posApp/_nav_link.html" with name="create_plan_inscripcion" icon="add_card" label="Nuevo plan" %}
+
+        {% if user_profile and user_profile.is_manager %}
+        <p class="u-nav__group">Gerencia</p>
+        {% include "posApp/_nav_link.html" with name="monthly_report" icon="monitoring" label="Reporte mensual" %}
+        {% include "posApp/_nav_link.html" with name="reporte-anual" icon="calendar_month" label="Reporte anual" %}
+        {% include "posApp/_nav_link.html" with name="comparar-meses" icon="compare_arrows" label="Comparar meses" %}
+        {% if not user_profile.is_modelo_manager %}
+        {% include "posApp/_nav_link.html" with name="cambiar-sucursal" icon="swap_horiz" label="Cambiar sucursal" %}
+        {% include "posApp/_nav_link.html" with name="create_sucursal" icon="add_business" label="Crear sucursal" %}
+        {% endif %}
+        {% endif %}
+    </nav>
+
+    <div class="u-sidebar__user">
+        <span class="material-symbols-rounded" aria-hidden="true">account_circle</span>
+        <strong>{{ user.first_name|default:user.username }}</strong>
+        <a href="{% url 'logout' %}"><span class="material-symbols-rounded" aria-hidden="true">logout</span>Salir</a>
     </div>
+    <script>
+        // En celular y tableta el menú se abre encima de la página: fondo oscuro, cerrar al tocar afuera o con Esc
+        (function() {
+            var drawer = document.querySelector('.u-sidebar');
+            var scrim = document.createElement('div');
+            var movil = window.matchMedia('(max-width: 991px)');
+            scrim.className = 'u-scrim';
+            document.body.appendChild(scrim);
+
+            function abierto() {
+                return drawer.classList.contains('mdc-drawer--open') && !drawer.classList.contains('mdc-drawer--closing');
+            }
+            function sincronizar() {
+                document.body.classList.toggle('u-menu-abierto', movil.matches && abierto());
+            }
+            function cerrar() {
+                if (abierto()) document.querySelector('.sidebar-toggler').click();
+            }
+
+            new MutationObserver(sincronizar).observe(drawer, {attributes: true, attributeFilter: ['class']});
+            movil.addEventListener('change', function(e) {
+            // Al pasar de escritorio a pantalla chica el menú no debe quedar tapando la página
+            if (e.matches) cerrar();
+            sincronizar();
+        });
+            scrim.addEventListener('click', cerrar);
+            drawer.querySelector('.u-sidebar__cerrar').addEventListener('click', cerrar);
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && document.body.classList.contains('u-menu-abierto')) cerrar();
+            });
+        })();
+    </script>
 </aside>
-<!-- partial -->

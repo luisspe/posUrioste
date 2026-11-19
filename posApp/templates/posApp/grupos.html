@@ -1,0 +1,119 @@
+{% extends "posApp/base.html" %}
+{% load static %}
+{% block pageContent %}
+<div class="u-page">
+    <header class="u-head">
+        <div>
+            <h1 class="u-title">Grupos y horarios</h1>
+            <p class="u-subtitle">{{ grupos|length }} grupo{{ grupos|length|pluralize }}. El pase de lista y el check-in usan estos grupos.</p>
+        </div>
+        <span class="u-head__acciones">
+            <button type="button" class="u-btn u-btn--ghost" data-guia-abrir>
+                <span class="material-symbols-rounded" aria-hidden="true">help</span>¿Cómo funciona?
+            </button>
+            <a class="u-btn u-btn--primary" href="{% url 'grupo-nuevo' %}">
+                <span class="material-symbols-rounded" aria-hidden="true">add</span>Nuevo grupo
+            </a>
+        </span>
+    </header>
+
+    {% if sugeridos or sin_grupo or sugeridos_productos %}
+    <section class="u-avisos">
+        {% if sugeridos %}
+        <a class="u-panel u-aviso" href="{% url 'grupos-importar' %}">
+            <span class="material-symbols-rounded" aria-hidden="true">auto_awesome</span>
+            <span><strong>Crear {{ sugeridos }} grupo{{ sugeridos|pluralize }} a partir de los horarios</strong>
+            Revisa la propuesta armada con lo que dice el horario de cada alumno.</span>
+        </a>
+        {% endif %}
+        {% if sugeridos_productos %}
+        <a class="u-panel u-aviso" href="{% url 'grupos-desde-productos' %}">
+            <span class="material-symbols-rounded" aria-hidden="true">sell</span>
+            <span><strong>Crear {{ sugeridos_productos }} grupo{{ sugeridos_productos|pluralize }} desde tus productos de clase</strong>
+            Productos como "Niños Lun Mie y Vie 5PM" se vuelven su grupo, y al cobrarlos el alumno entra solo.</span>
+        </a>
+        {% endif %}
+        {% if sin_grupo %}
+        <a class="u-panel u-aviso" href="{% url 'grupos-sin-asignar' %}">
+            <span class="material-symbols-rounded" aria-hidden="true">group_off</span>
+            <span><strong>{{ sin_grupo }} alumno{{ sin_grupo|pluralize }} activo{{ sin_grupo|pluralize }} sin grupo</strong>
+            No aparecen en el pase de lista hasta que tengan grupo.</span>
+        </a>
+        {% endif %}
+    </section>
+    {% endif %}
+
+    {% if grupos %}
+    <div class="u-panel u-clientes">
+        {% for g in grupos %}
+        <div class="u-cliente u-grupo{% if not g.activo %} es-baja{% endif %}">
+            <span class="u-grupo__hora">{% if g.hora_inicio %}{{ g.hora_inicio|time:"H:i" }}{% else %}—{% endif %}</span>
+            <a class="u-cliente__datos u-grupo__editar" href="{% url 'grupo-editar' g.id %}" title="Editar grupo">
+                <span class="u-alumno__nombre">{{ g.nombre }}</span>
+                <span class="u-alumno__tags">
+                    <span class="u-tag">{{ g.dias_texto }}</span>
+                    {% if g.nivel %}<span class="u-tag">{{ g.nivel }}</span>{% endif %}
+                    {% if not g.activo %}<span class="u-tag u-tag--baja">Inactivo</span>{% endif %}
+                    {% for p in g.productos.all %}<span class="u-tag u-tag--proximo">{{ p.name }}</span>{% endfor %}
+                </span>
+            </a>
+            <span class="u-grupo__alumnos"><b>{{ g.alumnos }}</b> alumno{{ g.alumnos|pluralize }}</span>
+            <span class="u-grupo__acciones">
+                {% if g.activo and g.pase_fecha %}
+                <a class="u-btn {% if g.pase_hoy %}u-btn--primary{% else %}u-btn--ghost{% endif %}"
+                   href="{% url 'pase-lista' %}?fecha={{ g.pase_fecha|date:'Y-m-d' }}&grupo={{ g.id }}">
+                    <span class="material-symbols-rounded" aria-hidden="true">fact_check</span>
+                    {% if g.pase_hoy %}Pasar lista{% else %}Lista del {{ g.pase_fecha|date:"D j"|lower }}{% endif %}
+                </a>
+                {% endif %}
+                <a class="u-btn u-btn--ghost u-btn--icon" href="{% url 'grupo-editar' g.id %}" title="Editar grupo" aria-label="Editar {{ g.nombre }}">
+                    <span class="material-symbols-rounded" aria-hidden="true">edit</span>
+                </a>
+            </span>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="u-panel u-vacio">
+        <span class="material-symbols-rounded">groups</span>
+        <strong>Todavía no hay grupos</strong>
+        Créalos a partir de los horarios de tus alumnos o uno por uno con "Nuevo grupo".
+    </div>
+    {% endif %}
+</div>
+<div class="u-guia" data-guia role="dialog" aria-modal="true" aria-labelledby="guia-titulo">
+    <div class="u-guia__caja">
+        <section class="u-guia__paso activo">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/grupos_1.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2 id="guia-titulo">1. Tus grupos</h2>
+            <p>Cada renglón es un horario: la hora de inicio, los días que tiene clase y cuántos alumnos lo forman.</p>
+            <p>Toca el nombre o el lápiz para ver quiénes están en el grupo y cambiar sus datos.</p>
+        </section>
+        <section class="u-guia__paso">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/grupos_2.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2>2. Pasa lista desde aquí</h2>
+            <p>Toca <strong>Pasar lista</strong> en el grupo y se abre el pase de lista de hoy con esa clase ya elegida. Solo marca a cada alumno.</p>
+            <p>Si hoy no le toca clase, el botón dice <strong>Lista del</strong> y el último día que tuvo clase, para ponerte al día.</p>
+        </section>
+        <section class="u-guia__paso">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/grupos_3.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2>3. Crea un grupo</h2>
+            <p>Con <strong>Nuevo grupo</strong> escribe el nombre, la hora y marca los días. Si no marcas ningún día, el grupo tiene clase todos los días.</p>
+            <p>En <strong>Productos que inscriben a este grupo</strong> elige la mensualidad de ese horario: al cobrarla en el punto de venta, el alumno entra solo al grupo.</p>
+        </section>
+        <section class="u-guia__paso">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/grupos_4.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2>4. Agrega o quita alumnos</h2>
+            <p>Dentro del grupo, busca al alumno por nombre o celular y tócalo para agregarlo. Su horario cambia al del grupo y, si estaba en otra clase a la misma hora, sale de aquella.</p>
+            <p>El botón rojo a la derecha de cada alumno lo saca del grupo.</p>
+        </section>
+        <section class="u-guia__paso">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/grupos_5.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2>5. Alumnos sin grupo</h2>
+            <p>Los alumnos activos sin grupo no salen en el pase de lista. Cuando haya, verás el aviso arriba.</p>
+            <p>Ábrelo, marca a los que van juntos, elige su grupo y toca <strong>Agregar a los marcados</strong>.</p>
+        </section>
+    </div>
+</div>
+{% include "posApp/_guia_pasos.html" %}
+{% endblock pageContent %}

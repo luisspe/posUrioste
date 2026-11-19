@@ -1,8 +1,11 @@
-{% extends "posApp/base.html" %} {% block pageContent %}
+{% extends "posApp/base.html" %} {% load static %} {% block pageContent %}
 <div class="mdc-layout-grid__cell stretch-card mdc-layout-grid__cell--span-12">
     <div class="mdc-card py-2">
         <div class="d-flex justify-content-between align-items-center">
             <h4 class="card-title mb-0">Punto de Ventas</h4>
+            <button type="button" class="u-btn u-btn--ghost" data-guia-abrir>
+                <span class="material-symbols-rounded" aria-hidden="true">help</span>¿Cómo cobro una mensualidad?
+            </button>
         </div>
     </div>
 </div>
@@ -15,7 +18,7 @@
                     <div class="col-lg-5 col-md-6 col-sm-12">
                         <div class="form-group mb-3">
                             <label for="product-id">Selecciona Productos</label>
-                            <select id="product-id" class="form-select form-select-sm">
+                            <select id="product-id" class="form-select form-select-sm" data-placeholder="Escribe para buscar un producto">
                                 <option value="" disabled selected></option>
                                 {% for product in products %}
                                 <option value="{{ product.pk }}">{{ product }}</option>
@@ -26,7 +29,7 @@
                     <div class="col-lg-4 col-md-6 col-sm-12">
                         <div class="form-group mb-3">
                             <label for="client">Agrega un cliente</label>
-                            <select id="client" name="client" class="form-select form-select-sm" autocapitalize="">
+                            <select id="client" name="client" class="form-select form-select-sm" data-placeholder="Escribe nombre del cliente">
                                 <option value="" disabled selected></option>
                                 {% for client in clients %}
                                 <option value="{{ client.pk }}">{{ client }} {{ client.apellido_paterno }} {{ client.apellido_materno }}</option>
@@ -117,6 +120,17 @@
                                     <span class="h3 fw-bold" id="grand_total">0.00</span>
                                 </dd>
 
+                                <dt class="h4 fw-bold text-light">Próximo pago</dt>
+                                <input class="form-control form-control-sm text-center" type="date" name="proximo_pago" id="proximo-pago">
+                                <small class="d-block text-light mb-2" id="proximo-pago-ayuda">Se llena solo al agregar una mensualidad. Puedes cambiarlo.</small>
+                                <div id="grupo-pos" hidden>
+                                    <dt class="h4 fw-bold text-light">Grupo</dt>
+                                    <select class="form-select form-select-sm" name="grupo_id" id="grupo-id">
+                                        <option value="">Sin cambiar grupo</option>
+                                        {% for g in grupos %}<option value="{{ g.id }}">{{ g.nombre }}</option>{% endfor %}
+                                    </select>
+                                    <small class="d-block text-light mb-2" id="grupo-ayuda">El alumno queda inscrito en este grupo.</small>
+                                </div>
                                 <dt class="h4 fw-bold text-light">Comentario</dt>
                                
                                 <input class="form-control form-control-sm text-center"  type="text" name="comentario">
@@ -128,7 +142,7 @@
             </fieldset>
             <div class="row">
                 <div class="col-md-12 text-end">
-                    <button class="btn btn-primary btn-sm rounded-0" type="button" id="check_out"><i class="mdi mdi-save"></i> Checkout</button>
+                    <button class="btn btn-primary btn-sm rounded-0" type="button" id="check_out"><i class="mdi mdi-save"></i> Cobrar</button>
                 </div>
             </div>
         </form>
@@ -149,7 +163,48 @@
         <td class="px-2 py-1 product_price text-end"></td>
         <td class="px-2 py-1 product_total text-end"></td>
     </tr>
-</noscript> {% endblock pageContent %} {% block ScriptBlock %}
+</noscript>
+<div class="u-guia" data-guia role="dialog" aria-modal="true" aria-labelledby="guia-titulo">
+    <div class="u-guia__caja">
+        <section class="u-guia__paso activo">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/cobrar_1.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2 id="guia-titulo">1. Elige al alumno y cómo paga</h2>
+            <p>En <strong>Agrega un cliente</strong> escribe parte de su nombre y elígelo. Luego elige la forma de pago.</p>
+            <p>Si llegas desde el botón <strong>Cobrar</strong> de Clientes o de su ficha, el alumno ya viene elegido.</p>
+        </section>
+        <section class="u-guia__paso">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/cobrar_2.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2>2. Elige la mensualidad de su clase</h2>
+            <p>Escribe en <strong>Selecciona Productos</strong> y fíjate bien: puede haber varias mensualidades parecidas. Elige la que corresponde a los días y la hora en que nada el alumno.</p>
+            <p>Toca <strong>Agrega Articulo</strong> y la mensualidad pasa a la lista.</p>
+        </section>
+        <section class="u-guia__paso">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/cobrar_3.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2>3. Revisa el próximo pago y el grupo</h2>
+            <p>Al agregar una mensualidad, <strong>Próximo pago</strong> se llena solo con su día de pago. Puedes cambiar la fecha si acordaron otra.</p>
+            <p>Si la mensualidad no dice el horario (como "3 CLA X SEM"), aparece <strong>Grupo</strong>: confirma que sea su clase. Al cobrar, el alumno queda inscrito en ese grupo y su horario se actualiza.</p>
+        </section>
+        <section class="u-guia__paso">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/cobrar_4.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2>4. Si no se llena el próximo pago, es otro producto</h2>
+            <p>Productos como la inscripción, gorras o comida <strong>no son mensualidad</strong>: el próximo pago se queda vacío y el alumno seguiría saliendo como que debe.</p>
+            <p>Si te pasó, quita el producto con la <strong>×</strong> roja y agrega la mensualidad correcta. Antes de cobrar, revisa que <strong>Próximo pago</strong> tenga fecha.</p>
+        </section>
+        <section class="u-guia__paso">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/cobrar_5.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2>5. Cobra</h2>
+            <p>Toca <strong>Cobrar</strong>, escribe lo que te dieron en efectivo o con tarjeta y el sistema calcula el cambio. Toca <strong>Guardar</strong>.</p>
+            <p>El ticket dice la fecha del próximo pago para que el papá o mamá la tenga.</p>
+        </section>
+        <section class="u-guia__paso">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/cobrar_6.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2>6. Ya sale al corriente</h2>
+            <p>En el pase de lista y en el check-in el alumno aparece <strong>Al corriente</strong>, con la mensualidad que pagó y su próximo pago.</p>
+            <p>Si sigue saliendo que debe, lo más probable es que se haya cobrado un producto que no es mensualidad.</p>
+        </section>
+    </div>
+</div>
+{% include "posApp/_guia_pasos.html" %} {% endblock pageContent %} {% block ScriptBlock %}
 <script>
     var product_json = '{{ product_json }}'
     if (product_json == "" || product_json == "{}") {
@@ -163,6 +218,71 @@
         Object.keys(product_json).map(k => {
             prod_arr[product_json[k].id] = product_json[k]
         })
+    }
+
+    var client_arr = {}
+    JSON.parse('{{ client_json|escapejs }}').forEach(function(c) { client_arr[c.id] = c })
+    var proximoPagoManual = false
+    var grupoManual = false
+
+    function fechaISO(d) {
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
+    }
+
+    // Próximo pago sugerido: el día de pago del alumno en el siguiente mes, o hoy + los días que cubre la mensualidad
+    function sugerirProximoPago() {
+        if (proximoPagoManual) return
+        var dias = 0
+        $('#POS-field table tbody [name="product_id[]"]').each(function() {
+            var p = prod_arr[this.value]
+            if (p && p.dias_vigencia > dias) dias = p.dias_vigencia
+        })
+        var $campo = $('#proximo-pago'), $ayuda = $('#proximo-pago-ayuda')
+        if (!dias) {
+            $campo.val('')
+            $ayuda.text('Se llena solo al agregar una mensualidad. Puedes cambiarlo.')
+            return
+        }
+        var hoy = new Date(), cliente = client_arr[$('#client').val()]
+        var fecha
+        if (cliente && cliente.dia_pago) {
+            // El siguiente día de pago que quede al menos a dos semanas y media de hoy
+            var minimo = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + Math.min(dias, 30) - 12)
+            for (var m = 0; m < 14; m++) {
+                var ultimoDia = new Date(hoy.getFullYear(), hoy.getMonth() + m + 1, 0).getDate()
+                fecha = new Date(hoy.getFullYear(), hoy.getMonth() + m, Math.min(cliente.dia_pago, ultimoDia))
+                if (fecha >= minimo) break
+            }
+            $ayuda.text('Calculado con su día de pago (' + cliente.dia_pago + ' de cada mes). Puedes cambiarlo.')
+        } else {
+            fecha = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + dias)
+            $ayuda.text('Calculado: hoy + ' + dias + ' días. Puedes cambiarlo.')
+        }
+        $campo.val(fechaISO(fecha))
+    }
+
+    // Mensualidad sin grupo propio (ej. "3 CLA X SEM"): pedir el grupo, sugiriendo el que ya tiene el alumno
+    function sugerirGrupo() {
+        var hayMensualidad = false, productoConGrupo = false
+        $('#POS-field table tbody [name="product_id[]"]').each(function() {
+            var p = prod_arr[this.value]
+            if (p && p.dias_vigencia) hayMensualidad = true
+            if (p && p.grupo) productoConGrupo = true
+        })
+        var mostrar = hayMensualidad && !productoConGrupo && $('#grupo-id option').length > 1
+        $('#grupo-pos').attr('hidden', !mostrar)
+        if (!mostrar) { $('#grupo-id').val(''); grupoManual = false; return }
+        if (grupoManual) return
+        // 1) lo que dice el nombre del producto, 2) el grupo actual del alumno
+        var sugerido = null, ayuda = 'El alumno queda inscrito en este grupo.'
+        $('#POS-field table tbody [name="product_id[]"]').each(function() {
+            var p = prod_arr[this.value]
+            if (!sugerido && p && p.grupo_sugerido) { sugerido = p.grupo_sugerido; ayuda = 'Sugerido por el nombre de "' + p.name + '". Revisa que sea su clase.' }
+        })
+        var cliente = client_arr[$('#client').val()]
+        if (!sugerido && cliente && cliente.grupos.length) { sugerido = cliente.grupos[0]; ayuda = 'Es el grupo que ya tiene. Cámbialo si va a otra clase.' }
+        $('#grupo-id').val(sugerido ? String(sugerido) : '')
+        $('#grupo-ayuda').text(ayuda)
     }
 
     function calc() {
@@ -198,14 +318,11 @@
 
     }
     $(function() {
-        $('#product-id').select2({
-            placeholder: "Selecciona un producto aqui",
-            width: '100%'
-        })
-        $('#client').select2({
-            placeholder: "Selecciona un cliente aqui",
-            width: '100%'
-        })
+        // Viene de "Cobrar" en Clientes o en la ficha: el alumno ya llega elegido
+        var clienteUrl = new URLSearchParams(location.search).get('cliente')
+        if (clienteUrl && $('#client option[value="' + clienteUrl + '"]').length) {
+            $('#client').val(clienteUrl).trigger('change')
+        }
         $('#add_item').on('click', function() {
             var id = $('#product-id').val();
             var qty = $('#product-qty').val();
@@ -218,7 +335,7 @@
 
             if (!!prod_arr[id]) {
                 if ($('#POS-field table tbody input[name="product_id[]"][value="' + id + '"]').length > 0) {
-                    alert('Item Already in the List.');
+                    alert('Ese producto ya está en la lista. Cambia la cantidad si lleva más de uno.');
                     return false;
                 }
 
@@ -234,15 +351,19 @@
                 $('#product-id').val('').trigger('change');
                 $('#product-qty').val(1);
                 calc();
+                sugerirProximoPago();
+                sugerirGrupo();
 
                 tr.find('[name="qty[]"]').on('input keypress keyup keydown', function() {
                     calc();
                 });
 
                 tr.find('.rem-item').click(function() {
-                    if (confirm("Are you sure to remove " + data.name + " product form list?") == true) {
+                    if (confirm("¿Quitar " + data.name + " de la lista?") == true) {
                         tr.remove();
                         calc();
+                        sugerirProximoPago();
+                        sugerirGrupo();
                     }
                 });
             } else {
@@ -250,6 +371,18 @@
             }
         });
 
+
+        $('#client').on('change', function() { sugerirProximoPago(); grupoManual = false; sugerirGrupo() })
+        $('#grupo-id').on('change', function(e) {
+            if (!e.originalEvent) return
+            grupoManual = true
+            $('#grupo-ayuda').text('Grupo elegido a mano.')
+        })
+        $('#proximo-pago').on('input change', function(e) {
+            if (!e.originalEvent) return
+            proximoPagoManual = !!this.value
+            if (this.value) $('#proximo-pago-ayuda').text('Fecha puesta a mano.')
+        })
 
         $('[name="tax"]').on('input keypress keydown keyup', function() {
             calc()
@@ -261,10 +394,10 @@
 
         $('#check_out').click(function() {
             if ($('#POS-field table tbody tr').length <= 0) {
-                alert("Add atleast 1 product first!")
+                alert("Agrega al menos un producto para cobrar.")
                 return false;
             }
-            uni_modal("Checkout", "{% url 'checkout-modal' %}?grand_total=" + $('[name="grand_total"]').val())
+            uni_modal("Cobrar", "{% url 'checkout-modal' %}?grand_total=" + $('[name="grand_total"]').val())
         })
         $('#pos-form').submit(function(e) {
             e.preventDefault();
@@ -298,7 +431,7 @@
                     if (typeof resp == 'object' && resp.status == 'success') {
                         el.removeClass("alert alert-danger err-msg")
                             // location.reload()
-                        uni_modal("Receipt", "{% url 'receipt-modal' %}?id=" + resp.sale_id)
+                        uni_modal("Ticket", "{% url 'receipt-modal' %}?id=" + resp.sale_id)
                         $('#uni_modal').on('hide.bs.modal', function() {
                             location.reload()
                         })

@@ -1,0 +1,157 @@
+<div class="modal fade" id="credencial-modal" tabindex="-1" aria-labelledby="credencial-titulo" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered u-credencial-dialogo">
+        <div class="modal-content u-credencial-modal">
+            <div class="u-credencial-modal__head">
+                <h2 class="u-seccion__titulo" id="credencial-titulo">Credencial</h2>
+                <button type="button" class="u-btn u-btn--ghost u-btn--icon" data-bs-dismiss="modal" aria-label="Cerrar"><span class="material-symbols-rounded">close</span></button>
+            </div>
+            <div class="u-credencial-modal__imagen">
+                <img id="credencial-img" alt="Credencial con código QR">
+            </div>
+            <div class="u-credencial-modal__acciones">
+                <button type="button" class="u-btn u-btn--primary" id="credencial-compartir" hidden>
+                    <span class="material-symbols-rounded" aria-hidden="true">share</span>Compartir por WhatsApp
+                </button>
+                <button type="button" class="u-btn u-btn--ghost" id="credencial-descargar">
+                    <span class="material-symbols-rounded" aria-hidden="true">download</span>Descargar
+                </button>
+                <button type="button" class="u-btn u-btn--ghost" id="credencial-imprimir">
+                    <span class="material-symbols-rounded" aria-hidden="true">print</span>Imprimir
+                </button>
+            </div>
+            <p class="u-dato__nota" id="credencial-ayuda">Descárgala y adjúntala en el chat de WhatsApp del alumno.</p>
+        </div>
+    </div>
+</div>
+<div id="credencial-qr-temp" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+    (function() {
+        var SUCURSAL = "{{ request.session.sucursal_nombre|default:user_profile.sucursal|default:''|escapejs }}";
+        var actual = null;  // {blob, archivo, nombre}
+
+        function ajustarTexto(ctx, texto, fuente, tamano, anchoMax) {
+            while (tamano > 30) {
+                ctx.font = fuente.replace('{t}', tamano);
+                if (ctx.measureText(texto).width <= anchoMax) break;
+                tamano -= 2;
+            }
+            return tamano;
+        }
+
+        // Dibuja la credencial completa en un canvas: lo que se ve es exactamente lo que se descarga o comparte
+        function dibujar(datos) {
+            var W = 1080, H = 1350;
+            var canvas = document.createElement('canvas');
+            canvas.width = W; canvas.height = H;
+            var ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, W, H);
+
+            ctx.fillStyle = '#0B1F4D';
+            ctx.fillRect(0, 0, W, 270);
+
+            ctx.textAlign = 'left';
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = '700 92px "Barlow Condensed", "Arial Narrow", sans-serif';
+            ctx.fillText('Acuática Urioste', 80, 145);
+            if (SUCURSAL) {
+                ctx.fillStyle = '#9FB3D6';
+                ctx.font = '500 40px "Barlow", sans-serif';
+                ctx.fillText(SUCURSAL, 82, 212, W - 160);
+            }
+
+            var temp = document.getElementById('credencial-qr-temp');
+            temp.innerHTML = '';
+            new QRCode(temp, {text: datos.codigo, width: 600, height: 600, correctLevel: QRCode.CorrectLevel.M});
+            ctx.drawImage(temp.querySelector('canvas'), 240, 350, 600, 600);
+
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#0B1F4D';
+            var t = ajustarTexto(ctx, datos.nombre, '700 {t}px "Barlow Condensed", "Arial Narrow", sans-serif', 80, W - 120);
+            ctx.font = '700 ' + t + 'px "Barlow Condensed", "Arial Narrow", sans-serif';
+            ctx.fillText(datos.nombre, W / 2, 1058);
+
+            if (datos.grupo) {
+                ctx.fillStyle = '#5B6B82';
+                ctx.font = '500 38px "Barlow", sans-serif';
+                ctx.fillText(datos.grupo, W / 2, 1115, W - 120);
+            }
+
+            ctx.font = '600 46px "Barlow Condensed", sans-serif';
+            var anchoCodigo = ctx.measureText(datos.codigo).width + 64;
+            ctx.fillStyle = '#EEF4F9';
+            ctx.beginPath();
+            ctx.roundRect((W - anchoCodigo) / 2, 1150, anchoCodigo, 70, 35);
+            ctx.fill();
+            ctx.fillStyle = '#0B1F4D';
+            ctx.fillText(datos.codigo, W / 2, 1201);
+
+            ctx.fillStyle = '#5B6B82';
+            ctx.font = '500 34px "Barlow", sans-serif';
+            ctx.fillText('Muestra este código al llegar a la alberca', W / 2, 1295);
+            return canvas;
+        }
+
+        function abrir(datos) {
+            Promise.all([
+                document.fonts.load('700 80px "Barlow Condensed"'),
+                document.fonts.load('600 46px "Barlow Condensed"'),
+                document.fonts.load('500 38px "Barlow"')
+            ]).catch(function() {}).then(function() {
+                var canvas = dibujar(datos);
+                document.getElementById('credencial-img').src = canvas.toDataURL('image/png');
+                document.getElementById('credencial-titulo').textContent = 'Credencial de ' + datos.nombre.trim().split(/\s+/)[0];
+                canvas.toBlob(function(blob) {
+                    var nombreArchivo = 'credencial-' + datos.codigo + '.png';
+                    var archivo = new File([blob], nombreArchivo, {type: 'image/png'});
+                    actual = {blob: blob, archivo: archivo, nombreArchivo: nombreArchivo, nombre: datos.nombre};
+                    var puedeCompartir = !!(navigator.canShare && navigator.canShare({files: [archivo]}));
+                    document.getElementById('credencial-compartir').hidden = !puedeCompartir;
+                    document.getElementById('credencial-ayuda').textContent = puedeCompartir
+                        ? 'Toca "Compartir por WhatsApp" y elige el chat del alumno.'
+                        : 'Descárgala y adjúntala en el chat de WhatsApp del alumno.';
+                }, 'image/png');
+                $('#credencial-modal').modal('show');
+            });
+        }
+
+        document.getElementById('credencial-compartir').addEventListener('click', function() {
+            if (!actual) return;
+            navigator.share({
+                files: [actual.archivo],
+                title: 'Credencial de ' + actual.nombre,
+                text: 'Hola, esta es tu credencial de Acuática Urioste. Muéstrala al llegar para registrar tu asistencia.'
+            }).catch(function() {});
+        });
+
+        document.getElementById('credencial-descargar').addEventListener('click', function() {
+            if (!actual) return;
+            var a = document.createElement('a');
+            a.href = URL.createObjectURL(actual.blob);
+            a.download = actual.nombreArchivo;
+            a.click();
+            setTimeout(function() { URL.revokeObjectURL(a.href); }, 1000);
+        });
+
+        document.getElementById('credencial-imprimir').addEventListener('click', function() {
+            var src = document.getElementById('credencial-img').src;
+            var w = window.open('', '_blank');
+            if (!w) return;
+            w.document.write('<title>Credencial</title><style>@page{margin:1cm}body{margin:0;display:flex;justify-content:center}img{width:8cm}</style>' +
+                '<img src="' + src + '" onload="window.print()">');
+            w.document.close();
+        });
+
+        $(document).on('click', '.ver-credencial', function(e) {
+            e.preventDefault();
+            abrir({
+                codigo: this.dataset.codigo,
+                nombre: this.dataset.nombre,
+                grupo: this.dataset.grupo || ''
+            });
+        });
+    })();
+</script>

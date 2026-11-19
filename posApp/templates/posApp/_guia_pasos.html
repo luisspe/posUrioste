@@ -1,0 +1,66 @@
+{% comment %}Guía "¿Cómo funciona?" por pasos, con un video corto en cada paso.
+   Uso: un <div class="u-guia" data-guia> con <section class="u-guia__paso"> por paso, un botón con data-guia-abrir
+   y este include una vez por página. Si hay varias guías en la página, cada una lleva nombre: data-guia="venta"
+   la abre el botón data-guia-abrir="venta". Con data-guia-ir="<url>" y data-guia-ir-texto el último paso
+   lleva a esa pantalla en vez de solo cerrar. El video de cada paso solo corre mientras ese paso está a la vista.
+   Los videos se graban con alumnos de prueba (sin datos reales).{% endcomment %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('[data-guia]').forEach(function (guia) {
+        var pasos = guia.querySelectorAll('.u-guia__paso');
+        var caja = guia.querySelector('.u-guia__caja');
+        var puntos = document.createElement('div');
+        puntos.className = 'u-guia__puntos';
+        puntos.setAttribute('aria-hidden', 'true');
+        pasos.forEach(function () { puntos.appendChild(document.createElement('span')); });
+        var pie = document.createElement('footer');
+        pie.className = 'u-guia__pie';
+        pie.innerHTML = '<button type="button" class="u-guia__saltar">Cerrar</button>' +
+            '<span><button type="button" class="u-btn u-btn--ghost u-guia__atras" hidden>Atrás</button> ' +
+            '<button type="button" class="u-btn u-btn--primary u-guia__sig">Siguiente</button></span>';
+        caja.appendChild(puntos);
+        caja.appendChild(pie);
+        var atras = pie.querySelector('.u-guia__atras'), sig = pie.querySelector('.u-guia__sig');
+        var actual = 0, anterior = null;
+
+        function mostrar(i) {
+            actual = i;
+            pasos.forEach(function (p, k) { p.classList.toggle('activo', k === i); });
+            puntos.querySelectorAll('span').forEach(function (p, k) { p.classList.toggle('activo', k === i); });
+            atras.hidden = i === 0;
+            sig.textContent = i === pasos.length - 1 ? (guia.dataset.guiaIrTexto || 'Entendido') : 'Siguiente';
+            guia.querySelectorAll('video').forEach(function (v) { v.pause(); });
+            var v = pasos[i].querySelector('video');
+            if (v) { v.currentTime = 0; var r = v.play(); if (r) r.catch(function () {}); }
+        }
+        function abrir() {
+            anterior = document.activeElement;
+            mostrar(0);
+            guia.classList.add('abierta');
+            document.body.style.overflow = 'hidden';
+            sig.focus();
+        }
+        function cerrar() {
+            guia.classList.remove('abierta');
+            document.body.style.overflow = '';
+            guia.querySelectorAll('video').forEach(function (v) { v.pause(); });
+            if (anterior) anterior.focus();
+        }
+        sig.addEventListener('click', function () {
+            if (actual < pasos.length - 1) mostrar(actual + 1);
+            else if (guia.dataset.guiaIr) window.location.href = guia.dataset.guiaIr;
+            else cerrar();
+        });
+        atras.addEventListener('click', function () { if (actual > 0) mostrar(actual - 1); });
+        pie.querySelector('.u-guia__saltar').addEventListener('click', cerrar);
+        guia.addEventListener('click', function (e) { if (e.target === guia) cerrar(); });
+        document.addEventListener('keydown', function (e) {
+            if (!guia.classList.contains('abierta')) return;
+            if (e.key === 'Escape') cerrar();
+            if (e.key === 'ArrowRight') sig.click();
+            if (e.key === 'ArrowLeft' && !atras.hidden) atras.click();
+        });
+        document.querySelectorAll('[data-guia-abrir="' + guia.dataset.guia + '"]').forEach(function (b) { b.addEventListener('click', abrir); });
+    });
+});
+</script>

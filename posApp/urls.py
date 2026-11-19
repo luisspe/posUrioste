@@ -1,4 +1,8 @@
 from . import views
+from . import views_asistencia
+from . import views_grupos
+from . import views_reportes
+from . import views_reporte_anual
 from django.contrib import admin
 from django.contrib.auth import views as auth_views
 from django.urls import path
@@ -42,6 +46,29 @@ urlpatterns = [
     path('create-sucursal/', views.create_sucursal, name='create_sucursal'),
     path('export_sales_to_excel/', views.export_sales_to_excel, name='export_sales_to_excel'),
     path('api/clientes/search/', views.buscar_clientes, name='buscar_clientes'),
-    path('reportes/mensual/', views.dashboard_report, name='monthly_report'),
+    path('reportes/mensual/', views_reportes.reporte_mensual, name='monthly_report'),
+    path('reportes/mensual/excel/', views_reportes.reporte_mensual_excel, name='reporte-mensual-excel'),
+    path('reportes/anual/', views_reporte_anual.reporte_anual, name='reporte-anual'),
+    path('reportes/comparar/', views_reportes.comparar_meses, name='comparar-meses'),
+    path('reportes/anual/excel/', views_reporte_anual.reporte_anual_excel, name='reporte-anual-excel'),
     path('proxy/image/<str:image_url_b64>/', views.image_proxy, name='image_proxy'),
+    path('asistencia/', views_asistencia.pase_lista, name='pase-lista'),
+    path('asistencia/reporte/', views_asistencia.reporte_asistencia, name='reporte-asistencia'),
+    path('asistencia/reporte/excel/', views_asistencia.exportar_asistencia_excel, name='exportar-asistencia-excel'),
+    path('clientes/<int:cliente_id>/', views_asistencia.cliente_asistencias, name='cliente-ficha'),
+    path('clientes/<int:cliente_id>/asistencias/', views_asistencia.cliente_asistencias, name='cliente-asistencias'),
+    path('asistencia/marcar/', views_asistencia.asistencia_marcar, name='asistencia-marcar'),
+    path('asistencia/marcar-pendientes/', views_asistencia.asistencia_marcar_pendientes, name='asistencia-marcar-pendientes'),
+    path('alumnos/buscar/', views_grupos.buscar_alumnos_json, name='buscar-alumnos'),
+    path('grupos/', views_grupos.grupos, name='grupos'),
+    path('grupos/nuevo/', views_grupos.grupo_editar, name='grupo-nuevo'),
+    path('grupos/importar/', views_grupos.grupos_importar, name='grupos-importar'),
+    path('grupos/desde-productos/', views_grupos.grupos_desde_productos, name='grupos-desde-productos'),
+    path('grupos/sin-grupo/', views_grupos.grupos_sin_asignar, name='grupos-sin-asignar'),
+    path('grupos/miembro/', views_grupos.grupo_miembro, name='grupo-miembro'),
+    path('grupos/<int:grupo_id>/', views_grupos.grupo_editar, name='grupo-editar'),
+    path('asistencia/checkin/', views_asistencia.checkin, name='checkin'),
+    path('asistencia/checkin/registrar/', views_asistencia.checkin_registrar, name='checkin-registrar'),
+    path('asistencia/credenciales/', views_asistencia.credenciales_qr, name='credenciales-qr'),
+    path('clientes/<int:cliente_id>/credencial/', views_asistencia.credenciales_qr, name='cliente-credencial'),
 ]

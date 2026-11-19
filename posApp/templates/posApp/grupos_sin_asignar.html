@@ -1,0 +1,50 @@
+{% extends "posApp/base.html" %}
+{% block pageContent %}
+<div class="u-page">
+    <a href="{% url 'grupos' %}" class="u-volver"><span class="material-symbols-rounded" aria-hidden="true">arrow_back</span>Grupos</a>
+    <header class="u-head">
+        <div>
+            <h1 class="u-title">Alumnos sin grupo</h1>
+            <p class="u-subtitle">{{ clientes.paginator.count }} alumno{{ clientes.paginator.count|pluralize }} activo{{ clientes.paginator.count|pluralize }}. Marca a los que van juntos y elige su grupo.</p>
+        </div>
+    </header>
+
+    <form method="GET" class="u-panel u-buscador" role="search">
+        <div class="u-buscador__campo">
+            <span class="material-symbols-rounded" aria-hidden="true">search</span>
+            <input type="search" name="q" value="{{ query }}" placeholder="Nombre, celular o código" autocomplete="off">
+        </div>
+    </form>
+
+    {% if clientes %}
+    <form method="POST">
+        {% csrf_token %}
+        <div class="u-panel u-clientes">
+            {% for c in clientes %}
+            <label class="u-cliente u-propuesta">
+                <input type="checkbox" name="cliente" value="{{ c.id }}" class="u-check">
+                <span class="u-avatar" aria-hidden="true">{{ c.iniciales }}</span>
+                <span class="u-cliente__datos">
+                    <span class="u-alumno__nombre">{{ c.nombre }} {{ c.apellido_paterno }} {{ c.apellido_materno }}</span>
+                    <span class="u-pago__detalle">Horario capturado: {{ c.horario|default:"ninguno" }}</span>
+                </span>
+            </label>
+            {% endfor %}
+        </div>
+        {% include "posApp/_paginacion.html" %}
+        <div class="u-guardar">
+            <select name="grupo" class="u-input" required aria-label="Grupo">
+                <option value="">Elige el grupo…</option>
+                {% for g in grupos %}<option value="{{ g.id }}">{{ g.nombre }} ({{ g.dias_texto }}{% if g.hora_inicio %}, {{ g.hora_inicio|time:"H:i" }}{% endif %})</option>{% endfor %}
+            </select>
+            <button type="submit" class="u-btn u-btn--primary">Agregar a los marcados</button>
+        </div>
+    </form>
+    {% else %}
+    <div class="u-panel u-vacio">
+        <span class="material-symbols-rounded">task_alt</span>
+        <strong>Todos los alumnos activos tienen grupo</strong>
+    </div>
+    {% endif %}
+</div>
+{% endblock pageContent %}

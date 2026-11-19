@@ -1,0 +1,101 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Credenciales QR | POS Acuatica Urioste</title>
+    <link rel="stylesheet" href="{% static 'posAPP/assets/bootstrap/css/bootstrap.min.css' %}">
+    <style>
+        body { background: #f2f2f2; }
+        .credenciales { display: flex; flex-wrap: wrap; gap: 12px; }
+        .credencial {
+            width: 8.6cm; height: 5.4cm; background: #fff; border: 1px solid #ccc; border-radius: 8px;
+            display: flex; align-items: center; gap: 10px; padding: 10px; overflow: hidden; break-inside: avoid;
+        }
+        .credencial .qr { flex: 0 0 3.6cm; }
+        .credencial .qr img, .credencial .qr canvas { width: 3.6cm !important; height: 3.6cm !important; }
+        .credencial .datos { flex: 1; min-width: 0; }
+        .credencial .encabezado { background: #081552; color: #fff; font-size: 11px; font-weight: 700; padding: 3px 6px; border-radius: 4px; margin-bottom: 6px; }
+        .credencial .nombre { font-weight: 700; font-size: 15px; line-height: 1.2; }
+        .credencial .detalle { font-size: 11px; color: #555; }
+        .credencial .codigo { font-family: monospace; font-size: 13px; margin-top: 6px; }
+        @media print {
+            body { background: #fff; }
+            .no-print { display: none !important; }
+            .credencial { border-color: #999; }
+            @page { margin: 1cm; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid py-3">
+        <div class="no-print d-flex flex-wrap align-items-end justify-content-between gap-2 mb-3">
+            <div>
+                <h4 class="mb-0">Credenciales con QR</h4>
+                <div class="small text-muted">{{ clientes|length }} credencial{{ clientes|length|pluralize:"es" }} · {{ sucursal }}</div>
+            </div>
+            {% if not individual %}
+            <form method="GET" class="d-flex flex-wrap align-items-end gap-2">
+                <input type="text" name="horario" value="{{ request.GET.horario }}" placeholder="Horario (ej. 5pm)" class="form-control form-control-sm rounded-0" style="width:150px">
+                <input type="text" name="q" value="{{ request.GET.q }}" placeholder="Alumno" class="form-control form-control-sm rounded-0" style="width:150px">
+                <button type="submit" class="btn btn-outline-primary btn-sm rounded-0">Filtrar</button>
+            </form>
+            {% endif %}
+            <div class="d-flex gap-2">
+                {% if individual %}
+                <button type="button" class="btn btn-success btn-sm rounded-0" id="descargar">Descargar imagen (WhatsApp)</button>
+                {% endif %}
+                <button type="button" class="btn btn-primary btn-sm rounded-0" onclick="window.print()">Imprimir</button>
+                <a href="javascript:history.back()" class="btn btn-secondary btn-sm rounded-0">Volver</a>
+            </div>
+        </div>
+
+        <div class="credenciales">
+            {% for c in clientes %}
+            <div class="credencial">
+                <div class="qr" data-codigo="{{ c.codigo_asistencia }}"></div>
+                <div class="datos">
+                    <div class="encabezado">{{ sucursal|upper }}</div>
+                    <div class="nombre">{{ c.nombre }} {{ c.apellido_paterno }} {{ c.apellido_materno }}</div>
+                    <div class="detalle">{% if c.nivel %}{{ c.nivel }}{% endif %}{% if c.nivel and c.horario %} · {% endif %}{{ c.horario }}</div>
+                    <div class="codigo">{{ c.codigo_asistencia }}</div>
+                </div>
+            </div>
+            {% empty %}
+            <p class="text-muted">No hay alumnos activos con esos filtros.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script>
+        document.querySelectorAll('.qr').forEach(function(el) {
+            new QRCode(el, {text: el.dataset.codigo, width: 256, height: 256, correctLevel: QRCode.CorrectLevel.M});
+        });
+
+        var descargar = document.getElementById('descargar');
+        if (descargar) {
+            descargar.addEventListener('click', function() {
+                // Arma una imagen con el QR, el nombre y el código para mandarla por WhatsApp
+                var qr = document.querySelector('.qr canvas');
+                var nombre = document.querySelector('.credencial .nombre').textContent.trim();
+                var codigo = document.querySelector('.qr').dataset.codigo;
+                var canvas = document.createElement('canvas');
+                canvas.width = 420; canvas.height = 500;
+                var ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(qr, 50, 30, 320, 320);
+                ctx.fillStyle = '#081552'; ctx.textAlign = 'center';
+                ctx.font = 'bold 22px sans-serif'; ctx.fillText(nombre, 210, 395, 400);
+                ctx.font = '20px monospace'; ctx.fillText(codigo, 210, 430);
+                ctx.font = '16px sans-serif'; ctx.fillStyle = '#555'; ctx.fillText('Muestra este código al llegar', 210, 465);
+                var a = document.createElement('a');
+                a.download = 'credencial_' + codigo + '.png';
+                a.href = canvas.toDataURL('image/png');
+                a.click();
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,368 @@
+{% extends "posApp/base.html" %}
+{% load humanize static %}
+{% block pageContent %}
+<div class="u-page u-rm">
+    <header class="u-head">
+        <div>
+            <h1 class="u-title">Reporte {{ anio }}</h1>
+            <p class="u-subtitle">{{ sucursal.nombre }}{% if en_curso %}, con datos al {{ corte|date:"j \d\e F"|lower }}{% endif %}</p>
+        </div>
+        <form method="GET" class="u-rm__mes">
+            {% if anio_anterior_url %}
+            <a class="u-btn u-btn--ghost u-btn--icon" href="{{ anio_anterior_url }}" title="Año anterior" aria-label="Año anterior">
+                <span class="material-symbols-rounded" aria-hidden="true">chevron_left</span>
+            </a>
+            {% else %}
+            <span class="u-btn u-btn--ghost u-btn--icon is-disabled" aria-hidden="true"><span class="material-symbols-rounded">chevron_left</span></span>
+            {% endif %}
+            <select name="anio" class="u-input" aria-label="Año del reporte" data-combo onchange="this.form.submit()">
+                {% for a in anios %}<option value="{{ a }}"{% if a == anio %} selected{% endif %}>{{ a }}</option>{% endfor %}
+            </select>
+            {% if anio_siguiente_url %}
+            <a class="u-btn u-btn--ghost u-btn--icon" href="{{ anio_siguiente_url }}" title="Año siguiente" aria-label="Año siguiente">
+                <span class="material-symbols-rounded" aria-hidden="true">chevron_right</span>
+            </a>
+            {% else %}
+            <span class="u-btn u-btn--ghost u-btn--icon is-disabled" aria-hidden="true"><span class="material-symbols-rounded">chevron_right</span></span>
+            {% endif %}
+            <label class="u-rm__vs">
+                <span>Comparar con</span>
+                <select name="vs" class="u-input" onchange="this.form.submit()">
+                    <option value="">Año anterior ({{ anio_previo }})</option>
+                    {% for a in anios %}{% if a != anio %}<option value="{{ a }}"{% if vs_elegido and a == anio_ant %} selected{% endif %}>{{ a }}</option>{% endif %}{% endfor %}
+                </select>
+            </label>
+            <button type="button" class="u-btn u-btn--ghost" data-guia-abrir aria-label="¿Cómo funciona?">
+                <span class="material-symbols-rounded" aria-hidden="true">help</span><span class="u-rm__mes-texto">¿Cómo funciona?</span>
+            </button>
+            <a class="u-btn u-btn--primary" href="{% url 'reporte-anual-excel' %}?anio={{ anio }}{% if vs_elegido %}&vs={{ anio_ant }}{% endif %}" aria-label="Descargar Excel">
+                <span class="material-symbols-rounded" aria-hidden="true">download</span><span class="u-rm__mes-texto">Descargar Excel</span>
+            </a>
+            <noscript><button type="submit" class="u-btn u-btn--ghost">Ver</button></noscript>
+        </form>
+    </header>
+
+    <section class="u-panel u-carriles" aria-labelledby="ritmo-titulo">
+        <div class="u-carriles__texto">
+            <h2 class="u-seccion__titulo" id="ritmo-titulo">{% if en_curso %}Cómo va el año contra {{ anio_ant }}{% else %}{{ anio }} contra {{ anio_ant }}{% endif %}</h2>
+            <p class="u-carriles__frase">
+                {% if ingresos_cmp %}
+                {% if diferencia >= 0 %}Vas <b class="bien">${{ diferencia_abs|floatformat:0|intcomma }} arriba</b>{% else %}Vas <b class="mal">${{ diferencia_abs|floatformat:0|intcomma }} abajo</b>{% endif %}
+                de lo que llevaba {{ anio_ant }}{% if en_curso %} al {{ corte_ant|date:"j \d\e F"|lower }}{% endif %}{% if cambio_anio is not None %} ({% if cambio_anio > 0 %}+{% endif %}{{ cambio_anio }}%){% endif %}.
+                {% else %}
+                No hay ventas de {{ anio_ant }} para comparar.
+                {% endif %}
+            </p>
+        </div>
+        <div class="u-carriles__pista" role="img" aria-label="{{ anio }}: ${{ ingresos|floatformat:0|intcomma }}; {{ anio_ant }}: ${{ ingresos_cmp|floatformat:0|intcomma }}">
+            <div class="u-carril u-carril--actual">
+                <span class="u-carril__nombre">{{ anio }}</span>
+                <div class="u-carril__agua"><span class="u-carril__nado" style="--avance: {{ carril }}%"></span></div>
+                <b class="u-carril__cifra">${{ ingresos|floatformat:0|intcomma }}</b>
+            </div>
+            <div class="u-carril u-carril--anterior">
+                <span class="u-carril__nombre">{{ anio_ant }}</span>
+                <div class="u-carril__agua"><span class="u-carril__nado" style="--avance: {{ carril_ant }}%"></span></div>
+                <b class="u-carril__cifra">${{ ingresos_cmp|floatformat:0|intcomma }}</b>
+            </div>
+        </div>
+        <dl class="u-carriles__extras">
+            {% if proyeccion %}
+            <div><dt>{% if proyeccion_por_temporada %}Si sigue igual que {{ anio_ant }}, cierras en{% else %}Si sigue este ritmo, cierras en{% endif %}</dt><dd>${{ proyeccion|floatformat:0|intcomma }}</dd></div>
+            {% endif %}
+            {% if ingresos_ant_total %}
+            <div><dt>{{ anio_ant }} completo</dt><dd>${{ ingresos_ant_total|floatformat:0|intcomma }}</dd></div>
+            {% endif %}
+            {% if mejor_mes %}
+            <div><dt>Mejor mes</dt><dd>{{ mejor_mes.nombre|capfirst }}, ${{ mejor_mes.ingresos|floatformat:0|intcomma }}</dd></div>
+            {% endif %}
+            {% if promedio_mes %}
+            <div><dt>Promedio por mes</dt><dd>${{ promedio_mes|floatformat:0|intcomma }}</dd></div>
+            {% endif %}
+        </dl>
+    </section>
+
+    <section class="u-rm__kpis" aria-label="Resumen del año">
+        <div class="u-panel u-dato">
+            <h2 class="u-dato__titulo">Ingresos</h2>
+            <p class="u-dato__cifra">${{ ingresos|floatformat:0|intcomma }}</p>
+            {% include "posApp/_cambio.html" with valor=cambios.ingresos contra=contra %}
+            <p class="u-dato__nota">{{ numero_ventas|intcomma }} venta{{ numero_ventas|pluralize }}</p>
+        </div>
+        <div class="u-panel u-dato">
+            <h2 class="u-dato__titulo">Salidas</h2>
+            <p class="u-dato__cifra{% if total_salidas %} u-dato__cifra--salida{% endif %}">{% if total_salidas %}−{% endif %}${{ total_salidas|floatformat:0|intcomma }}</p>
+            {% include "posApp/_cambio.html" with valor=cambios.salidas contra=contra inverso=True %}
+            <p class="u-dato__nota">Gastos registrados</p>
+        </div>
+        <div class="u-panel u-dato u-dato--neto{% if utilidad < 0 %} negativo{% endif %}">
+            <h2 class="u-dato__titulo">Utilidad</h2>
+            <p class="u-dato__cifra">{% if utilidad < 0 %}−{% endif %}${{ utilidad_abs|floatformat:0|intcomma }}</p>
+            {% include "posApp/_cambio.html" with valor=cambios.utilidad contra=contra %}
+            <p class="u-dato__nota">{% if margen is not None %}Te quedas con {{ margen }}% de lo que entra{% else %}Ingresos menos salidas{% endif %}</p>
+        </div>
+        <div class="u-panel u-dato">
+            <h2 class="u-dato__titulo">Ticket promedio</h2>
+            <p class="u-dato__cifra">${{ ticket|floatformat:0|intcomma }}</p>
+            {% include "posApp/_cambio.html" with valor=cambios.ticket contra=contra %}
+            <p class="u-dato__nota">Por venta</p>
+        </div>
+        <div class="u-panel u-dato">
+            <h2 class="u-dato__titulo">Alumnos que pagaron</h2>
+            <p class="u-dato__cifra">{{ alumnos|intcomma }}</p>
+            {% include "posApp/_cambio.html" with valor=cambios.alumnos contra=contra %}
+            <p class="u-dato__nota">Distintos en el año</p>
+        </div>
+    </section>
+
+    <div class="u-rm__fila">
+        <section class="u-panel u-seccion u-rm__grafica" aria-labelledby="meses-titulo">
+            <header class="u-rm__cabeza">
+                <h2 class="u-seccion__titulo" id="meses-titulo">Mes por mes</h2>
+                <div class="u-chips" role="tablist" aria-label="Tipo de gráfica">
+                    <button type="button" class="u-chip is-active" data-vista="meses" role="tab" aria-selected="true">{{ anio }} vs {{ anio_ant }}</button>
+                    <button type="button" class="u-chip" data-vista="acumulado" role="tab" aria-selected="false">Acumulado</button>
+                    <button type="button" class="u-chip" data-vista="alumnos" role="tab" aria-selected="false">Alumnos</button>
+                </div>
+            </header>
+            <div class="u-rm__lienzo"><canvas id="grafica-meses" aria-label="Ingresos por mes de {{ anio }} contra {{ anio_ant }}"></canvas></div>
+            <p class="u-dato__nota">Toca un mes para abrir su reporte mensual.</p>
+        </section>
+
+        <section class="u-panel u-seccion" aria-labelledby="formas-titulo">
+            <h2 class="u-seccion__titulo" id="formas-titulo">Cómo pagaron</h2>
+            {% if formas %}
+            <div class="u-rm__dona"><canvas id="grafica-formas" aria-label="Ingresos por forma de pago"></canvas></div>
+            <ul class="u-rm__leyenda">
+                {% for f in formas %}
+                <li>
+                    <span class="u-rm__punto" data-i="{{ forloop.counter0 }}"></span>
+                    <span class="u-rm__leyenda-nombre">{{ f.forma }}<small>{{ f.ventas|intcomma }} venta{{ f.ventas|pluralize }}</small></span>
+                    <b>${{ f.total|floatformat:0|intcomma }}</b>
+                    <span class="u-rm__pct">{{ f.porcentaje }}%</span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="u-vacio">Sin ventas este año.</p>
+            {% endif %}
+        </section>
+    </div>
+
+    <section class="u-panel u-seccion" aria-labelledby="tabla-titulo">
+        <h2 class="u-seccion__titulo" id="tabla-titulo">El año en números</h2>
+        <div class="u-ra__tabla-scroll">
+            <table class="u-ra__tabla">
+                <thead>
+                    <tr>
+                        <th scope="col">Mes</th>
+                        <th scope="col">{{ anio }}</th>
+                        <th scope="col">{{ anio_ant }}</th>
+                        <th scope="col">Cambio</th>
+                        <th scope="col">Salidas</th>
+                        <th scope="col">Utilidad</th>
+                        <th scope="col">Ventas</th>
+                        <th scope="col">Ticket</th>
+                        <th scope="col">Alumnos</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in meses %}
+                    <tr class="{% if m.futuro %}is-futuro{% endif %}{% if m.en_curso %} is-en-curso{% endif %}">
+                        <th scope="row">
+                            {% if m.futuro %}{{ m.nombre|capfirst }}
+                            {% else %}<a href="{% url 'monthly_report' %}?mes={{ m.mes_valor }}&vs={{ m.vs_valor }}">{{ m.nombre|capfirst }}</a>{% if m.en_curso %}<small>en curso</small>{% endif %}{% endif %}
+                        </th>
+                        <td>{% if m.futuro %}—{% else %}${{ m.ingresos|floatformat:0|intcomma }}{% endif %}</td>
+                        <td class="u-ra__ant">{% if m.ingresos_ant %}${{ m.ingresos_ant|floatformat:0|intcomma }}{% else %}—{% endif %}</td>
+                        <td>{% if m.cambio is not None %}<span class="u-ra__cambio {% if m.cambio >= 0 %}bien{% else %}mal{% endif %}">{% if m.cambio > 0 %}+{% endif %}{{ m.cambio }}%</span>{% else %}—{% endif %}</td>
+                        <td class="u-ra__salida">{% if m.salidas %}−${{ m.salidas|floatformat:0|intcomma }}{% else %}—{% endif %}</td>
+                        <td>{% if m.futuro %}—{% else %}${{ m.utilidad|floatformat:0|intcomma }}{% endif %}</td>
+                        <td>{% if m.futuro %}—{% else %}{{ m.ventas|intcomma }}{% endif %}</td>
+                        <td>{% if m.ticket %}${{ m.ticket|floatformat:0|intcomma }}{% else %}—{% endif %}</td>
+                        <td>{% if m.futuro %}—{% else %}{{ m.alumnos|intcomma }}{% endif %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <th scope="row">Total</th>
+                        <td>${{ ingresos|floatformat:0|intcomma }}</td>
+                        <td class="u-ra__ant">${{ ingresos_ant_total|floatformat:0|intcomma }}</td>
+                        <td></td>
+                        <td class="u-ra__salida">{% if total_salidas %}−${{ total_salidas|floatformat:0|intcomma }}{% else %}—{% endif %}</td>
+                        <td>${{ utilidad|floatformat:0|intcomma }}</td>
+                        <td>{{ numero_ventas|intcomma }}</td>
+                        <td>${{ ticket|floatformat:0|intcomma }}</td>
+                        <td>{{ alumnos|intcomma }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </section>
+
+    <div class="u-rm__fila">
+        <section class="u-panel u-seccion u-rm__ancha" aria-labelledby="productos-titulo">
+            <h2 class="u-seccion__titulo" id="productos-titulo">Lo que más se vendió en {{ anio }}</h2>
+            {% if productos %}
+            <ol class="u-rm__ranking">
+                {% for p in productos %}
+                <li>
+                    <div class="u-rm__ranking-fila">
+                        <span class="u-rm__ranking-nombre">{{ p.nombre }}</span>
+                        <b>${{ p.total|floatformat:0|intcomma }}</b>
+                    </div>
+                    <div class="u-rm__barra"><span style="width: {{ p.ancho }}%"></span></div>
+                    <small>{{ p.cantidad|floatformat:0|intcomma }} vendido{{ p.cantidad|pluralize }}</small>
+                </li>
+                {% endfor %}
+            </ol>
+            {% else %}
+            <p class="u-vacio">Sin ventas este año.</p>
+            {% endif %}
+        </section>
+
+        <section class="u-panel u-seccion" aria-labelledby="categorias-titulo">
+            <h2 class="u-seccion__titulo" id="categorias-titulo">Por categoría</h2>
+            {% if categorias %}
+            <div class="u-rm__apilada" aria-hidden="true">
+                {% for c in categorias %}<span data-i="{{ forloop.counter0 }}" style="flex-grow: {{ c.porcentaje|default:1 }}" title="{{ c.nombre }} {{ c.porcentaje }}%"></span>{% endfor %}
+            </div>
+            <ul class="u-rm__leyenda">
+                {% for c in categorias %}
+                <li>
+                    <span class="u-rm__punto" data-i="{{ forloop.counter0 }}"></span>
+                    <span class="u-rm__leyenda-nombre">{{ c.nombre }}</span>
+                    <b>${{ c.total|floatformat:0|intcomma }}</b>
+                    <span class="u-rm__pct">{{ c.porcentaje }}%</span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="u-vacio">Sin ventas este año.</p>
+            {% endif %}
+        </section>
+    </div>
+
+    <section class="u-panel u-seccion" aria-labelledby="historico-titulo">
+        <h2 class="u-seccion__titulo" id="historico-titulo">Año por año</h2>
+        <ol class="u-ra__historico">
+            {% for h in historico %}
+            <li class="{% if h.actual %}is-actual{% endif %}">
+                <a href="?anio={{ h.anio }}" aria-label="Ver {{ h.anio }}: ${{ h.ingresos|floatformat:0|intcomma }}">
+                    <span class="u-ra__historico-cifra">${{ h.ingresos|floatformat:0|intcomma }}</span>
+                    {% if h.cambio is not None %}<span class="u-ra__cambio {% if h.cambio >= 0 %}bien{% else %}mal{% endif %}">{% if h.cambio > 0 %}+{% endif %}{{ h.cambio }}%</span>{% elif h.en_curso %}<span class="u-ra__cambio">en curso</span>{% else %}<span class="u-ra__cambio u-ra__cambio--vacio" aria-hidden="true">&nbsp;</span>{% endif %}
+                    <span class="u-ra__historico-barra" style="--alto: {{ h.alto }}%"></span>
+                    <span class="u-ra__historico-anio">{{ h.anio }}</span>
+                </a>
+            </li>
+            {% endfor %}
+        </ol>
+    </section>
+</div>
+{{ grafica|json_script:"datos-grafica" }}
+<div class="u-guia" data-guia role="dialog" aria-modal="true" aria-labelledby="guia-titulo">
+    <div class="u-guia__caja">
+        <section class="u-guia__paso activo">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/reporte_anual_1.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2 id="guia-titulo">1. El año contra el anterior</h2>
+            <p>Elige el año y con cuál compararlo. Ves si vas arriba o abajo del otro año a la misma fecha.</p>
+            <p>Abajo están los totales del año: ingresos, salidas, utilidad y alumnos.</p>
+        </section>
+        <section class="u-guia__paso">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/reporte_anual_2.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2>2. Mes por mes</h2>
+            <p>La gráfica y la tabla muestran cada mes del año. Toca un mes para abrir su reporte.</p>
+            <p>Al final ves cómo ha ido cada año.</p>
+        </section>
+    </div>
+</div>
+{% include "posApp/_guia_pasos.html" %}
+{% endblock pageContent %}
+
+{% block ScriptBlock %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+(function() {
+    var datos = JSON.parse(document.getElementById('datos-grafica').textContent);
+    var css = getComputedStyle(document.documentElement);
+    var color = function(v) { return css.getPropertyValue(v).trim(); };
+    var C = {carril: color('--u-carril'), cloro: color('--u-cloro'), fosa: color('--u-fosa'), linea: color('--u-linea'),
+             tinta2: color('--u-tinta-2'), warn: color('--u-warn-solid'), ok: color('--u-ok')};
+    var paleta = [C.carril, C.cloro, C.fosa, C.warn, C.ok, '#8B5CF6', '#E2412F', '#94A3B8'];
+    document.querySelectorAll('.u-rm__punto, .u-rm__apilada span').forEach(function(el) {
+        el.style.background = paleta[el.dataset.i % paleta.length];
+    });
+    if (!window.Chart) return;
+
+    var pesos = new Intl.NumberFormat('es-MX', {style: 'currency', currency: 'MXN', maximumFractionDigits: 0});
+    var corto = function(v) {
+        var a = Math.abs(v);
+        return (v < 0 ? '−' : '') + '$' + (a >= 1000000 ? (a / 1000000).toLocaleString('es-MX', {maximumFractionDigits: 1}) + 'M'
+            : a >= 1000 ? (a / 1000).toLocaleString('es-MX', {maximumFractionDigits: 0}) + 'k' : a);
+    };
+    Chart.defaults.font.family = css.getPropertyValue('--u-text');
+    Chart.defaults.font.size = 13;
+    Chart.defaults.color = C.tinta2;
+    Chart.defaults.plugins.tooltip.backgroundColor = C.fosa;
+    Chart.defaults.plugins.tooltip.padding = 10;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) Chart.defaults.animation = false;
+    var dinero = function(ctx) { return ' ' + ctx.dataset.label + ': ' + pesos.format(ctx.parsed.y); };
+    var ejes = function(formato) {
+        return {x: {grid: {display: false}, border: {display: false}},
+                y: {grid: {color: C.linea}, border: {display: false}, beginAtZero: true,
+                    ticks: {callback: formato || corto, maxTicksLimit: 6}}};
+    };
+    var leyenda = {position: 'bottom', labels: {usePointStyle: true, boxHeight: 8}};
+    var anio = String(datos.anio), anioAnt = String(datos.anio_ant);
+    var abrirMes = function(e, el) {
+        if (el.length && datos.ingresos[el[0].index] !== null) {
+            window.location.href = "{% url 'monthly_report' %}?mes=" + datos.urls[el[0].index];
+        }
+    };
+    var comun = {maintainAspectRatio: false, interaction: {mode: 'index', intersect: false}, onClick: abrirMes,
+                 onHover: function(e, el) { e.native.target.style.cursor = el.length ? 'pointer' : 'default'; }};
+
+    var vistas = {
+        meses: {type: 'bar', data: {labels: datos.etiquetas, datasets: [
+            {label: anio, data: datos.ingresos, backgroundColor: C.carril, borderRadius: 5},
+            {label: anioAnt, data: datos.ingresos_ant, backgroundColor: '#C6D3E3', borderRadius: 5}
+        ]}, options: Object.assign({}, comun, {plugins: {legend: leyenda, tooltip: {callbacks: {label: dinero}}}, scales: ejes()})},
+        acumulado: {type: 'line', data: {labels: datos.etiquetas, datasets: [
+            {label: anio, data: datos.acumulado, borderColor: C.carril, backgroundColor: 'rgba(22,104,199,.12)', fill: true,
+             tension: .25, pointRadius: 3, borderWidth: 3},
+            {label: anioAnt, data: datos.acumulado_ant, borderColor: C.tinta2, borderDash: [6, 5], tension: .25,
+             pointRadius: 0, borderWidth: 2}
+        ]}, options: Object.assign({}, comun, {plugins: {legend: leyenda, tooltip: {callbacks: {label: dinero}}}, scales: ejes()})},
+        alumnos: {type: 'line', data: {labels: datos.etiquetas, datasets: [
+            {label: anio, data: datos.alumnos, borderColor: C.fosa, backgroundColor: C.fosa, tension: .25, pointRadius: 4, borderWidth: 3},
+            {label: anioAnt, data: datos.alumnos_ant, borderColor: '#94A3B8', backgroundColor: '#94A3B8', borderDash: [6, 5],
+             tension: .25, pointRadius: 0, borderWidth: 2}
+        ]}, options: Object.assign({}, comun, {plugins: {legend: leyenda, tooltip: {callbacks: {
+            label: function(ctx) { return ' ' + ctx.dataset.label + ': ' + ctx.parsed.y + ' alumnos'; }}}},
+            scales: ejes(function(v) { return v; })})}
+    };
+    var lienzo = document.getElementById('grafica-meses');
+    var grafica = new Chart(lienzo, vistas.meses);
+    document.querySelectorAll('[data-vista]').forEach(function(boton) {
+        boton.addEventListener('click', function() {
+            document.querySelectorAll('[data-vista]').forEach(function(b) {
+                b.classList.toggle('is-active', b === boton);
+                b.setAttribute('aria-selected', b === boton);
+            });
+            grafica.destroy();
+            grafica = new Chart(lienzo, vistas[boton.dataset.vista]);
+        });
+    });
+
+    var lienzoFormas = document.getElementById('grafica-formas');
+    if (lienzoFormas) {
+        new Chart(lienzoFormas, {type: 'doughnut',
+            data: {labels: datos.formas.etiquetas, datasets: [{data: datos.formas.valores, backgroundColor: paleta,
+                borderColor: '#fff', borderWidth: 3}]},
+            options: {maintainAspectRatio: false, cutout: '68%', plugins: {legend: {display: false},
+                tooltip: {callbacks: {label: function(ctx) { return ' ' + pesos.format(ctx.parsed); }}}}}});
+    }
+})();
+</script>
+{% endblock ScriptBlock %}

@@ -1,0 +1,20 @@
+{% load whatsapp %}<span class="u-pago">
+    {% if pago.estado == 'Al corriente' %}
+    <span class="u-pill u-pill--ok">Al corriente</span>
+    {% elif pago.estado == 'Por vencer' %}
+    <span class="u-pill u-pill--warn">{% if pago.dias == 0 %}Vence hoy{% else %}Vence en {{ pago.dias }} día{{ pago.dias|pluralize }}{% endif %}</span>
+    {% elif pago.estado == 'Vencido' %}
+    <span class="u-pill u-pill--bad">Debe {{ pago.dias }} día{{ pago.dias|pluralize }}</span>
+    {% whatsapp_adeudo cliente pago as liga_whatsapp %}
+    {% if liga_whatsapp %}
+    <a class="u-pago__whatsapp" href="{{ liga_whatsapp }}" target="whatsapp" rel="noopener">
+        <span class="material-symbols-rounded" aria-hidden="true">chat</span>Avisar por WhatsApp
+    </a>
+    {% endif %}
+    {% else %}
+    <span class="u-pill u-pill--none">Sin pagos</span>
+    {% endif %}
+    {% if pago.ultimo_pago %}
+    <span class="u-pago__detalle">{{ pago.concepto }}, pagado el {{ pago.ultimo_pago|date:"d/m/Y" }}{% if pago.vigente_hasta %}<br>Próximo pago el {{ pago.vigente_hasta|date:"d/m/Y" }}{% endif %}</span>
+    {% endif %}
+</span>

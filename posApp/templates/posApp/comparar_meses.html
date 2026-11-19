@@ -1,0 +1,119 @@
+{% extends "posApp/base.html" %}
+{% load humanize static %}
+{% block pageContent %}
+<div class="u-page u-rm u-cm">
+    <header class="u-head">
+        <div>
+            <h1 class="u-title">Comparar meses</h1>
+            <p class="u-subtitle">{{ sucursal.nombre }}. Elige dos meses para ver cuántos alumnos regresaron y cómo cambiaron las ventas.</p>
+        </div>
+        <span class="u-head__acciones">
+            <button type="button" class="u-btn u-btn--ghost" data-guia-abrir>
+                <span class="material-symbols-rounded" aria-hidden="true">help</span>¿Cómo funciona?
+            </button>
+        </span>
+    </header>
+
+    <section class="u-panel u-filtros" aria-label="Meses a comparar">
+        <div class="u-filtros__fila">
+            <div class="u-chips">
+                {% for t in atajos %}<a class="u-chip{% if t.activo %} is-active{% endif %}" href="{{ t.url }}">{{ t.nombre }}</a>{% endfor %}
+            </div>
+        </div>
+        <form method="GET" class="u-filtros__fila u-cm__meses">
+            <label class="u-campo">
+                <span>Alumnos de</span>
+                <select name="a" class="u-input" onchange="this.form.submit()">
+                    {% for m in opciones %}<option value="{{ m.valor }}"{% if m.valor == a_valor %} selected{% endif %}>{{ m.nombre }}</option>{% endfor %}
+                </select>
+            </label>
+            <span class="material-symbols-rounded u-cm__flecha" aria-hidden="true">arrow_forward</span>
+            <label class="u-campo">
+                <span>¿Pagaron en?</span>
+                <select name="b" class="u-input" onchange="this.form.submit()">
+                    {% for m in opciones %}<option value="{{ m.valor }}"{% if m.valor == b_valor %} selected{% endif %}>{{ m.nombre }}</option>{% endfor %}
+                </select>
+            </label>
+            <noscript><button type="submit" class="u-btn u-btn--primary">Comparar</button></noscript>
+        </form>
+    </section>
+
+    <section class="u-panel u-carriles u-cm__hero" aria-labelledby="retencion-titulo">
+        <div class="u-carriles__texto">
+            <h2 class="u-seccion__titulo" id="retencion-titulo">¿Regresaron?</h2>
+            <p class="u-carriles__frase">
+                {% if a.ids %}
+                De tus <b>{{ a.ids|length }}</b> alumnos de {{ a.nombre }}, <b class="{% if retencion >= 60 %}bien{% else %}mal{% endif %}">{{ volvieron|length }} pagaron en {{ b.nombre }}</b> ({{ retencion }}%){% if b.en_curso %}, con datos al {{ b.corte|date:"j \d\e F"|lower }}{% endif %}.
+                {% else %}
+                En {{ a.nombre }} no hay alumnos que hayan pagado clases.
+                {% endif %}
+            </p>
+        </div>
+        <div class="u-cm__barras">
+            {% if a.ids %}
+            <div class="u-cm__barra-fila">
+                <span class="u-cm__barra-nombre">{{ a.nombre|capfirst }}</span>
+                <div class="u-cm__barra" role="img" aria-label="{{ volvieron|length }} regresaron, {{ no_volvieron|length }} no">
+                    <span class="c-volvio" style="flex-grow: {{ volvieron|length }}"></span>
+                    <span class="c-no" style="flex-grow: {{ no_volvieron|length }}"></span>
+                </div>
+                <span class="u-cm__barra-leyenda"><i class="c-volvio"></i>{{ volvieron|length }} regresaron <i class="c-no"></i>{{ no_volvieron|length }} no</span>
+            </div>
+            {% endif %}
+            {% if b.ids %}
+            <div class="u-cm__barra-fila">
+                <span class="u-cm__barra-nombre">{{ b.nombre|capfirst }}</span>
+                <div class="u-cm__barra" role="img" aria-label="{{ barra.volvieron }} vienen de {{ a.nombre }}, {{ barra.de_antes }} ya eran alumnos antes, {{ barra.nuevos }} nuevos">
+                    <span class="c-volvio" style="flex-grow: {{ barra.volvieron }}"></span>
+                    <span class="c-antes" style="flex-grow: {{ barra.de_antes }}"></span>
+                    <span class="c-nuevo" style="flex-grow: {{ barra.nuevos }}"></span>
+                </div>
+                <span class="u-cm__barra-leyenda"><i class="c-volvio"></i>{{ barra.volvieron }} de {{ a.nombre }} <i class="c-antes"></i>{{ barra.de_antes }} de antes <i class="c-nuevo"></i>{{ barra.nuevos }} nuevos</span>
+            </div>
+            {% endif %}
+        </div>
+    </section>
+
+    <section class="u-panel u-seccion" aria-labelledby="cifras-titulo">
+        <h2 class="u-seccion__titulo" id="cifras-titulo">Lado a lado</h2>
+        <div class="u-ra__tabla-scroll">
+            <table class="u-ra__tabla u-cm__tabla">
+                <thead>
+                    <tr><th scope="col"></th><th scope="col">{{ a.nombre|capfirst }}</th><th scope="col">{{ b.nombre|capfirst }}{% if b.en_curso %} <small>en curso</small>{% endif %}</th><th scope="col">Cambio</th></tr>
+                </thead>
+                <tbody>
+                    {% with c=cambios.alumnos %}<tr><th scope="row">Alumnos que pagaron clases</th><td>{{ a.ids|length }}</td><td>{{ b.ids|length }}</td><td>{% include "posApp/_cambio_celda.html" %}</td></tr>{% endwith %}
+                    {% with c=cambios.ingresos %}<tr><th scope="row">Ingresos</th><td>${{ a.ingresos|floatformat:0|intcomma }}</td><td>${{ b.ingresos|floatformat:0|intcomma }}</td><td>{% include "posApp/_cambio_celda.html" %}</td></tr>{% endwith %}
+                    {% with c=cambios.ingresos_clases %}<tr><th scope="row">Ingresos por clases</th><td>${{ a.ingresos_clases|floatformat:0|intcomma }}</td><td>${{ b.ingresos_clases|floatformat:0|intcomma }}</td><td>{% include "posApp/_cambio_celda.html" %}</td></tr>{% endwith %}
+                    {% with c=cambios.ventas %}<tr><th scope="row">Tickets (ventas)</th><td>{{ a.ventas|intcomma }}</td><td>{{ b.ventas|intcomma }}</td><td>{% include "posApp/_cambio_celda.html" %}</td></tr>{% endwith %}
+                    {% with c=cambios.ticket %}<tr><th scope="row">Ticket promedio</th><td>${{ a.ticket|floatformat:0|intcomma }}</td><td>${{ b.ticket|floatformat:0|intcomma }}</td><td>{% include "posApp/_cambio_celda.html" %}</td></tr>{% endwith %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <div class="u-cm__listas">
+        {% include "posApp/_lista_comparar.html" with titulo="No regresaron" ayuda="Pagaron en "|add:a.nombre|add:" y no en "|add:b.nombre filas=no_volvieron clase="mal" mostrar_ultimo=True %}
+        {% include "posApp/_lista_comparar.html" with titulo="Regresaron" ayuda="Pagaron en los dos meses" filas=volvieron clase="bien" %}
+        {% include "posApp/_lista_comparar.html" with titulo="Nuevos en "|add:b.nombre ayuda="Primera vez que pagan clases" filas=nuevos clase="nuevo" %}
+        {% include "posApp/_lista_comparar.html" with titulo="Volvieron de antes" ayuda="Ya eran alumnos, pero no pagaron en "|add:a.nombre filas=de_antes clase="antes" %}
+    </div>
+</div>
+<div class="u-guia" data-guia role="dialog" aria-modal="true" aria-labelledby="guia-titulo">
+    <div class="u-guia__caja">
+        <section class="u-guia__paso activo">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/comparar_meses_1.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2 id="guia-titulo">1. Elige dos meses</h2>
+            <p>Escoge el mes de los alumnos y el mes a revisar. Arriba ves cuántos de esos alumnos regresaron a pagar.</p>
+            <p>Los atajos comparan este mes contra el pasado o contra hace un año.</p>
+        </section>
+        <section class="u-guia__paso">
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/comparar_meses_2.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <h2>2. Quiénes regresaron</h2>
+            <p>La tabla pone lado a lado alumnos, ingresos y tickets de los dos meses.</p>
+            <p>Abajo están las listas: los que no regresaron, los que sí, los nuevos y los que volvieron después de faltar. Toca un nombre para ver su ficha.</p>
+        </section>
+    </div>
+</div>
+{% include "posApp/_guia_pasos.html" %}
+{% endblock pageContent %}

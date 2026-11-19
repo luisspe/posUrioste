@@ -1,0 +1,3 @@
+<a class="u-nav__link{% if request.resolver_match.url_name == name %} is-active{% endif %}" href="{% url name %}"{% if request.resolver_match.url_name == name %} aria-current="page"{% endif %}>
+    <span class="material-symbols-rounded" aria-hidden="true">{{ icon }}</span>{{ label }}
+</a>

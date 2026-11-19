@@ -2,8 +2,8 @@ from pickle import FALSE
 from django.shortcuts import get_object_or_404, redirect, render
 from django.http import HttpResponse, JsonResponse
 from flask import jsonify
-from posApp.models import Category, Mensualidad, PlanInscripcion, Products, Sales, Salida, salesItems, Clientes, Genero, Levels, FormaPago, Sucursal, UserProfile
-from django.db.models import Count, Sum, Q
+from posApp.models import Category, Grupo, Mensualidad, PlanInscripcion, Products, Sales, Salida, salesItems, Clientes, Genero, Levels, FormaPago, Sucursal, UserProfile
+from django.db.models import Count, F, Sum, Q
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -23,6 +23,15 @@ from datetime import datetime
 from calendar import monthrange
 from django.contrib.auth.views import LoginView
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.utils.dateparse import parse_date
+from django.db.models.functions import TruncDate
+from urllib.parse import urlencode
+from datetime import timedelta
+from .proximo_pago import dia_de_pago, leer_proximo_pago
+from .views_grupos import grupo_para_producto
+from .views_asistencia import (AL_CORRIENTE, POR_VENCER, SIN_PAGOS, VENCIDO, _filtrar_clientes,
+                               buscar_clientes as filtrar_busqueda_clientes, calcular_estados_pago,
+                               horarios_de_sucursal)
 
 # Login
 def login_user(request):
@@ -52,11 +61,11 @@ def login_user(request):
                         resp['redirect_url'] = reverse('home-page')  # Redirect to home page for regular users
                 except UserProfile.DoesNotExist:
                     # Handle case where user does not have a profile associated (fallback behavior)
-                    resp['msg'] = "User profile not found. Please contact support."
+                    resp['msg'] = "Este usuario no tiene perfil. Pide al administrador que lo configure."
             else:
-                resp['msg'] = "Your account is inactive."
+                resp['msg'] = "Esta cuenta está desactivada."
         else:
-            resp['msg'] = "Incorrect username or password."
+            resp['msg'] = "El usuario o la contraseña no coinciden."
     
     return HttpResponse(json.dumps(resp), content_type='application/json')
 
@@ -218,6 +227,8 @@ def home(request):
         'sucursal': sucursal_a_usar,
         'user_profile': user_profile,
         'facebook_image_url': facebook_image_url,
+        'saludo': 'Buenos días' if now.hour < 12 else 'Buenas tardes' if now.hour < 19 else 'Buenas noches',
+        'hoy': now.date(),
     }
 
     return render(request, 'posApp/home.html', context)
@@ -584,59 +595,51 @@ def clients(request):
         except Sucursal.DoesNotExist:
             return render(request, 'posApp/error.html', {'message': 'Sucursal no válida en la sesión.'})
 
-    all_clients = Clientes.objects.filter(sucursal=sucursal_a_usar).order_by('nombre')
+    query = (request.GET.get('q') or '').strip()
+    estado_filtro = request.GET.get('estado') or ''
+    status_filtro = request.GET.get('status') or ''
+    horario_filtro = (request.GET.get('horario') or '').strip()
+    plan_inscripcion_filtro = request.GET.get('plan_inscripcion') or ''
 
-    # Aplicar filtros adicionales
-    estado_filtro = request.GET.get('estado_mensualidad')
-    horario_filtro = request.GET.get('horario')
-    plan_inscripcion_filtro = request.GET.get('plan_inscripcion')
-    query = request.GET.get('q')
-
-    if estado_filtro:
-        all_clients = all_clients.filter(estado_mensualidad=estado_filtro)
+    all_clients = filtrar_busqueda_clientes(
+        Clientes.objects.filter(sucursal=sucursal_a_usar).select_related('nivel', 'plan_inscripcion'), query
+    ).order_by('nombre', 'apellido_paterno')
+    if status_filtro:
+        all_clients = all_clients.filter(status=status_filtro)
     if horario_filtro:
-        all_clients = all_clients.filter(horario__icontains=horario_filtro)
+        all_clients = _filtrar_clientes(all_clients, None, horario_filtro, None)
     if plan_inscripcion_filtro:
         all_clients = all_clients.filter(plan_inscripcion__id=plan_inscripcion_filtro)
-    if query:
-        search_terms = query.split()
-        q_objects = Q()
-        for term in search_terms:
-            q_objects |= (
-                Q(nombre__icontains=term) |
-                Q(apellido_paterno__icontains=term) |
-                Q(apellido_materno__icontains=term)
-            )
-        all_clients = all_clients.filter(q_objects)
 
-    # --- LÓGICA DE PAGINACIÓN (YA LA TENÍAS, LA MEJORAMOS UN POCO) ---
-    paginator = Paginator(all_clients, 25)  # 25 clientes por página
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number) # .get_page maneja errores de forma más simple
+    # El estado de pago se calcula (no está guardado), así que para filtrar por él se calcula antes de paginar
+    estados_pago = {}
+    if estado_filtro:
+        ids = list(all_clients.values_list('id', flat=True))
+        estados_pago = calcular_estados_pago(ids)
+        all_clients = all_clients.filter(id__in=[i for i in ids if estados_pago[i]['estado'] == estado_filtro])
 
-    # --- CÓDIGO CLAVE PARA MANTENER FILTROS ---
+    paginator = Paginator(all_clients, 25)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    if not estado_filtro:
+        estados_pago = calcular_estados_pago([c.id for c in page_obj])
+
     query_params = request.GET.copy()
-    if 'page' in query_params:
-        del query_params['page']
-    query_params = query_params.urlencode()
-
-    # --- Preparación del contexto para la plantilla ---
-    horarios = [ 
-        "AGUAS ABIERTAS", "EQUIPO A", "EQUIPO B", "PRESELECTIVOS", "7:00 PRINCIPIANTES", 
-        # ... resto de tus horarios ...
-    ]
-    planes_inscripcion = PlanInscripcion.objects.filter(sucursal=sucursal_a_usar)
+    query_params.pop('page', None)
 
     context = {
         'page_title': 'Clientes',
-        'clients': page_obj,  # <-- CAMBIO: Pasamos el objeto de página completo
-        'query_params': query_params, # <-- NUEVO: Para los links de paginación
+        'clients': page_obj,
+        'filas': [{'cliente': c, 'pago': estados_pago[c.id]} for c in page_obj],
+        'query_params': query_params.urlencode(),
         'query': query,
         'estado_filtro': estado_filtro,
+        'status_filtro': status_filtro,
         'horario_filtro': horario_filtro,
         'plan_inscripcion_filtro': plan_inscripcion_filtro,
-        'horarios': horarios,
-        'planes_inscripcion': planes_inscripcion,
+        'horarios': horarios_de_sucursal(sucursal_a_usar),
+        'planes_inscripcion': PlanInscripcion.objects.filter(sucursal=sucursal_a_usar),
+        'estados_pago': [AL_CORRIENTE, POR_VENCER, VENCIDO, SIN_PAGOS],
+        'hay_filtros': bool(query or estado_filtro or status_filtro or horario_filtro or plan_inscripcion_filtro),
     }
 
     return render(request, 'posApp/clients.html', context)
@@ -712,12 +715,20 @@ def manage_clients(request):
         "19:00 AVANZADOS", "20:00 AVANZADOS", "21:00 AVANZADOS"
     ]
     
+    # Sugerencias: los horarios de siempre más los que ya se capturaron en la sucursal
+    vistos = {h.lower() for h in horarios}
+    horarios += [h for h in horarios_de_sucursal(sucursal_a_usar) if h.lower() not in vistos]
+
     context = {
         'client': client,
         'generos': genero,
         'niveles': nivel,
         'planes': planes_de_inscripccion,
         'horarios': horarios,
+        'grupos': Grupo.objects.filter(sucursal=sucursal_a_usar, activo=True)
+                  .order_by(F('hora_inicio').asc(nulls_last=True), 'nombre'),
+        'grupos_cliente': list(client.grupos.filter(sucursal=sucursal_a_usar).order_by(
+            F('hora_inicio').asc(nulls_last=True))) if client else [],
     }
     return render(request, 'posApp/manage_client.html', context)
 
@@ -821,6 +832,17 @@ def save_client(request):
                 save_client.save()
                 messages.success(request, 'Cliente creado con éxito.')
 
+            # Grupos: quitar los que se marcaron y entrar al elegido (sale de los que chocan de horario)
+            cliente = Clientes.objects.filter(id=id if id.isnumeric() and int(id) > 0 else save_client.id,
+                                              sucursal=sucursal_a_usar).first()
+            if cliente:
+                quitar = Grupo.objects.filter(id__in=[g for g in data.getlist('quitar_grupo') if g.isnumeric()],
+                                              sucursal=sucursal_a_usar)
+                cliente.grupos.remove(*quitar)
+                grupo = Grupo.objects.filter(id=data.get('grupo_id') or 0, sucursal=sucursal_a_usar).first()
+                if grupo:
+                    grupo.inscribir(cliente, actualizar_horario=True)
+
             resp['status'] = 'success'
                 
         except Exception as e:
@@ -902,6 +924,8 @@ def save_product(request):
     product_code = data.get('code', '')
     category_id = data.get('category_id')
     entrada_inventario = int(data.get('entrada_inventario', 0))
+    dias_vigencia = data.get('dias_vigencia', '').strip()
+    dias_vigencia = int(dias_vigencia) if dias_vigencia.isdigit() and int(dias_vigencia) > 0 else None
 
     # Validar categoría
     category = Category.objects.filter(id=category_id, sucursal=sucursal_a_usar).first()
@@ -924,6 +948,7 @@ def save_product(request):
                 'description': data.get('description', ''),
                 'price': float(data.get('price', '0')),
                 'status': int(data.get('status', '1')),
+                'dias_vigencia': dias_vigencia,
             }
 
             # Actualizar atributos del producto
@@ -943,6 +968,7 @@ def save_product(request):
                 description=data.get('description', ''),
                 price=float(data.get('price', '0')),
                 status=int(data.get('status', '1')),
+                dias_vigencia=dias_vigencia,
                 sucursal=sucursal_a_usar,
                 cantidad_disponible=int(data.get('cantidad_disponible', 0)) + entrada_inventario
             )
@@ -1030,8 +1056,16 @@ def pos(request):
     tipoPago = FormaPago.objects.all()  # Asumiendo que FormaPago no es específico de sucursal
 
     # Convertir los productos y clientes en JSON para usar en la plantilla
-    product_json = [{'id': product.id, 'name': product.name, 'price': float(product.price)} for product in products]
-    client_json = [{'id': client.id} for client in clients]
+    grupos = list(Grupo.objects.filter(sucursal=sucursal_a_usar, activo=True))
+    # Producto de clase sin grupo ligado: se propone el grupo que coincide con lo que dice su nombre
+    product_json = [{'id': product.id, 'name': product.name, 'price': float(product.price),
+                     'dias_vigencia': product.dias_vigencia, 'grupo': product.grupo_id,
+                     'grupo_sugerido': (getattr(grupo_para_producto(product, grupos), 'id', None)
+                                        if product.dias_vigencia and not product.grupo_id else None)}
+                    for product in products]
+    clients = clients.prefetch_related('grupos')
+    client_json = [{'id': client.id, 'dia_pago': dia_de_pago(client.pay_day),
+                    'grupos': [g.id for g in client.grupos.all()]} for client in clients]
 
     context = {
         'page_title': "Punto de Ventas",
@@ -1039,7 +1073,8 @@ def pos(request):
         'clients': clients,
         'product_json': json.dumps(product_json),
         'client_json': json.dumps(client_json),
-        'tipo_pago': tipoPago
+        'tipo_pago': tipoPago,
+        'grupos': grupos,
     }
 
     return render(request, 'posApp/pos.html', context)
@@ -1102,6 +1137,8 @@ def save_pos(request):
             tipoPago=tipoPago,
             usuario=request.user,
             comentario=data['comentario'],
+            # El campo del POS manda; si viene vacío se usa la fecha que hayan escrito en el comentario
+            proximo_pago=parse_date(data.get('proximo_pago') or '') or leer_proximo_pago(data.get('comentario'), timezone.localdate()),
             sucursal=sucursal_a_usar
         )
         sale_id = sales.pk
@@ -1138,6 +1175,14 @@ def save_pos(request):
                 total=total
             )
 
+            # Productos ligados a un grupo inscriben al alumno en ese grupo
+            if product.grupo_id:
+                product.grupo.inscribir(client, actualizar_horario=True)
+
+        grupo_elegido = Grupo.objects.filter(id=data.get('grupo_id') or 0, sucursal=sucursal_a_usar).first()
+        if grupo_elegido:
+            grupo_elegido.inscribir(client, actualizar_horario=True)
+
         resp['status'] = 'success'
         resp['sale_id'] = sale_id
         messages.success(request, "La venta ha sido guardada.")
@@ -1161,11 +1206,6 @@ def salesList(request):
     except UserProfile.DoesNotExist:
         return render(request, 'posApp/error.html', {'message': 'Este usuario no tiene un perfil asociado.'})
 
-    tz = pytz.timezone('America/Mexico_City')
-    now = timezone.now().astimezone(tz)
-    today = now.date()
-    tomorrow = today + timedelta(days=1)
-
     if not user_profile.sucursal:
         return render(request, 'posApp/error.html', {'message': 'Este perfil no tiene una sucursal asignada.'})
 
@@ -1176,132 +1216,120 @@ def salesList(request):
         except Sucursal.DoesNotExist:
             return render(request, 'posApp/error.html', {'message': 'Sucursal no válida en la sesión.'})
 
-    clientes = Clientes.objects.filter(sucursal=sucursal_a_usar)
-    formapago = FormaPago.objects.all()
-    productos = Products.objects.filter(sucursal=sucursal_a_usar)
-    categorias = Category.objects.filter(sucursal=sucursal_a_usar)
-    tipos_inscripcion = PlanInscripcion.objects.filter(sucursal=sucursal_a_usar)
-
+    hoy = timezone.localdate()
     client_id = request.GET.get('cliente_id', '').strip()
-    sales_query = Sales.objects.select_related('client').filter(sucursal=sucursal_a_usar)
+    formapago_id = request.GET.get('formapago_id', '').strip()
+    producto_id = request.GET.get('producto_id', '').strip()
+    categoria_id = request.GET.get('categoria_id', '').strip()
+    tipo_inscripcion_id = request.GET.get('tipo_inscripcion_id', '').strip()
+
+    start_date = parse_date(request.GET.get('start_date') or '') or hoy
+    end_date = parse_date(request.GET.get('end_date') or '') or hoy
+    if end_date < start_date:
+        start_date, end_date = end_date, start_date
+
+    sales_query = Sales.objects.filter(sucursal=sucursal_a_usar)
     salidas_query = Salida.objects.filter(sucursal=sucursal_a_usar)
-
-    start_date_str = today.strftime('%Y-%m-%d')
-    end_date_str = tomorrow.strftime('%Y-%m-%d')
-
+    cliente_filtrado = None
     if client_id:
+        # Con un cliente elegido se muestra todo su historial, sin importar las fechas
+        cliente_filtrado = Clientes.objects.filter(id=client_id, sucursal=sucursal_a_usar).first()
         sales_query = sales_query.filter(client_id=client_id)
-        start_date_str = ''
-        end_date_str = ''
+        salidas_query = salidas_query.none()
     else:
-        start_date_str = request.GET.get('start_date', start_date_str)
-        end_date_str = request.GET.get('end_date', end_date_str)
-        start_date = timezone.datetime.strptime(start_date_str, '%Y-%m-%d').date()
-        end_date = timezone.datetime.strptime(end_date_str, '%Y-%m-%d').date()
         sales_query = sales_query.filter(date_added__date__range=[start_date, end_date])
         salidas_query = salidas_query.filter(fecha__range=[start_date, end_date])
-    
-    # Filtros adicionales
-    filters = {
-        'formapago_id': 'tipoPago_id',
-        'producto_id': 'id__in',
-        'categoria_id': 'id__in',
-        'tipo_inscripcion_id': 'id__in'
-    }
-    for param, filter_key in filters.items():
-        value = request.GET.get(param)
-        if value:
-            if param == 'producto_id':
-                # CORRECCIÓN: Se cambió 'product__sucursal' por 'product_id__sucursal'
-                sale_ids = salesItems.objects.filter(
-                    product_id=value, 
-                    product_id__sucursal=sucursal_a_usar  # <--- AQUÍ
-                ).values_list('sale_id', flat=True)
-                sales_query = sales_query.filter(id__in=sale_ids)
 
-            elif param == 'categoria_id':
-                # CORRECCIÓN: Se cambió 'product__category_id' por 'product_id__category_id'
-                sale_ids = salesItems.objects.filter(
-                    product_id__category_id=value,      # <--- AQUÍ
-                    product_id__sucursal=sucursal_a_usar
-                ).values_list('sale_id', flat=True)
-                sales_query = sales_query.filter(id__in=sale_ids)
-                
-            elif param == 'tipo_inscripcion_id':
-                plan = PlanInscripcion.objects.get(id=value, sucursal=sucursal_a_usar)
-                sale_ids = salesItems.objects.filter(
-                    product_name__icontains=plan.nombre
-                ).values_list('sale_id', flat=True)
-                sales_query = sales_query.filter(id__in=sale_ids)
-            else:
-                sales_query = sales_query.filter(**{filter_key: value})
+    if formapago_id:
+        sales_query = sales_query.filter(tipoPago_id=formapago_id)
+    if producto_id:
+        sales_query = sales_query.filter(id__in=salesItems.objects.filter(
+            product_id=producto_id, product_id__sucursal=sucursal_a_usar).values('sale_id'))
+    if categoria_id:
+        sales_query = sales_query.filter(id__in=salesItems.objects.filter(
+            product_id__category_id=categoria_id, product_id__sucursal=sucursal_a_usar).values('sale_id'))
+    if tipo_inscripcion_id:
+        plan = PlanInscripcion.objects.filter(id=tipo_inscripcion_id, sucursal=sucursal_a_usar).first()
+        if plan:
+            sales_query = sales_query.filter(id__in=salesItems.objects.filter(
+                product_name__icontains=plan.nombre).values('sale_id'))
 
-
-    # Ordenar
     sales_query = sales_query.order_by('-date_added')
 
-    # Cálculo de totales
-    total_money = Decimal(sales_query.aggregate(Sum('grand_total'))['grand_total__sum'] or 0).quantize(Decimal('0.00'), rounding=ROUND_HALF_UP)
-    totalSalidas = Decimal(salidas_query.aggregate(Sum('monto'))['monto__sum'] or 0).quantize(Decimal('0.00'), rounding=ROUND_HALF_UP)
-    totalEfectivo = Decimal(sales_query.filter(tipoPago_id=1).aggregate(Sum('grand_total'))['grand_total__sum'] or 0).quantize(Decimal('0.00'), rounding=ROUND_HALF_UP)
-    totalBanco = Decimal(sales_query.filter(tipoPago_id=2).aggregate(Sum('grand_total'))['grand_total__sum'] or 0).quantize(Decimal('0.00'), rounding=ROUND_HALF_UP)
-    totalTarjeta = Decimal(sales_query.filter(tipoPago_id=4).aggregate(Sum('grand_total'))['grand_total__sum'] or 0).quantize(Decimal('0.00'), rounding=ROUND_HALF_UP)
+    def dinero(valor):
+        return Decimal(valor or 0).quantize(Decimal('0.00'), rounding=ROUND_HALF_UP)
 
-    # Paginación
-    paginator = Paginator(sales_query, 25)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
+    total_ventas = dinero(sales_query.aggregate(total=Sum('grand_total'))['total'])
+    total_salidas = dinero(salidas_query.aggregate(total=Sum('monto'))['total'])
+    por_forma_pago = [
+        {'forma': f['tipoPago__tipo'] or 'Sin forma de pago', 'total': dinero(f['total']), 'ventas': f['ventas']}
+        for f in sales_query.values('tipoPago__tipo').annotate(total=Sum('grand_total'), ventas=Count('id')).order_by('-total')
+    ]
+    totales_por_dia = {
+        d['dia']: dinero(d['total'])
+        for d in sales_query.annotate(dia=TruncDate('date_added')).values('dia').annotate(total=Sum('grand_total'))
+    }
 
-    # Mantener parámetros de filtro
+    paginator = Paginator(sales_query.select_related('client', 'tipoPago', 'usuario')
+                          .prefetch_related('salesitems_set__product_id'), 40)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    # Ventas de la página agrupadas por día, con el total del día completo (no solo de la página)
+    dias = []
+    for venta in page_obj:
+        fecha = timezone.localtime(venta.date_added)
+        if not dias or dias[-1]['fecha'] != fecha.date():
+            dias.append({'fecha': fecha.date(), 'total': totales_por_dia.get(fecha.date(), 0), 'ventas': []})
+        conceptos = []
+        for item in venta.salesitems_set.all():
+            nombre = item.product_name or (item.product_id.name if item.product_id else 'Producto eliminado')
+            conceptos.append(f"{int(item.qty)} × {nombre}" if item.qty and item.qty != 1 else nombre)
+        dias[-1]['ventas'].append({'venta': venta, 'hora': fecha, 'conceptos': conceptos})
+
     query_params = request.GET.copy()
-    if 'page' in query_params:
-        del query_params['page']
-    query_params = query_params.urlencode()
+    query_params.pop('page', None)
 
-    tipo_pago_dict = {1: "Efectivo", 2: "Banco", 3: "Efectivo y Tarjeta", 4:"Tarjeta"}
-    
-    # Preparar datos para la vista
-    sales = []
-    for sale in page_obj:
-        client_name = 'No Client'
-        horario = 'No Schedule'
-        plan_inscripcion = None
-
-        if sale.client:
-            client_name = f"{sale.client.nombre} {sale.client.apellido_paterno} {sale.client.apellido_materno}"
-            horario = sale.client.horario
-            plan_inscripcion = sale.client.plan_inscripcion
-
-        sales.append({
-            'id': sale.id,
-            'date': sale.date_added.astimezone(tz).strftime('%Y-%m-%d %H:%M'),
-            'client_name': client_name,
-            'horario': horario,
-            'plan_inscripcion': plan_inscripcion,
-            'total': sale.grand_total,
-            'realizo': sale.usuario,
-            'payment_type': tipo_pago_dict.get(sale.tipoPago_id, "Unknown")
-        })
+    inicio_mes = hoy.replace(day=1)
+    fin_mes_pasado = inicio_mes - timedelta(days=1)
+    periodos = [
+        ('Hoy', hoy, hoy),
+        ('Ayer', hoy - timedelta(days=1), hoy - timedelta(days=1)),
+        ('Esta semana', hoy - timedelta(days=hoy.weekday()), hoy),
+        ('Este mes', inicio_mes, hoy),
+        ('Mes pasado', fin_mes_pasado.replace(day=1), fin_mes_pasado),
+    ]
+    base = {k: v for k, v in request.GET.items() if v and k not in ('start_date', 'end_date', 'page', 'cliente_id')}
 
     context = {
-        'page_title': 'Sales Transactions',
-        'sales_data': sales,
+        'page_title': 'Reportes de venta',
+        'dias': dias,
         'page_obj': page_obj,
-        'query_params': query_params,
-        'salida_data': list(salidas_query),
-        'total_ventas': total_money,
-        'total_salidas': totalSalidas,
-        'neto': total_money - totalSalidas,
-        'totalEfectivo': totalEfectivo,
-        'totalBanco': totalBanco,
-        'totalTarjeta': totalTarjeta,
-        'clientes': clientes,
-        'formapago': formapago,
-        'productos': productos,
-        'categorias': categorias,
-        'tipos_inscripcion': tipos_inscripcion,
-        'start_date': start_date_str,
-        'end_date': end_date_str,
+        'query_params': query_params.urlencode(),
+        'salidas': list(salidas_query.order_by('-fecha')),
+        'total_ventas': total_ventas,
+        'total_salidas': total_salidas,
+        'neto': total_ventas - total_salidas,
+        'neto_abs': abs(total_ventas - total_salidas),
+        'numero_ventas': paginator.count,
+        'por_forma_pago': por_forma_pago,
+        'clientes': Clientes.objects.filter(sucursal=sucursal_a_usar).order_by('nombre', 'apellido_paterno'),
+        'formapago': FormaPago.objects.all(),
+        'productos': Products.objects.filter(sucursal=sucursal_a_usar).order_by('name'),
+        'categorias': Category.objects.filter(sucursal=sucursal_a_usar),
+        'tipos_inscripcion': PlanInscripcion.objects.filter(sucursal=sucursal_a_usar),
+        'start_date': start_date,
+        'end_date': end_date,
+        'cliente_filtrado': cliente_filtrado,
+        'filtros': {'cliente_id': client_id, 'formapago_id': formapago_id, 'producto_id': producto_id,
+                    'categoria_id': categoria_id, 'tipo_inscripcion_id': tipo_inscripcion_id},
+        'mas_filtros': bool(categoria_id or tipo_inscripcion_id),
+        'paginas': list(paginator.get_elided_page_range(page_obj.number, on_each_side=1, on_ends=1)),
+        'elipsis': paginator.ELLIPSIS,
+        'periodos': [
+            {'nombre': n, 'url': urlencode({**base, 'start_date': i.isoformat(), 'end_date': f.isoformat()}),
+             'activo': not client_id and (i, f) == (start_date, end_date)}
+            for n, i, f in periodos
+        ],
     }
 
     return render(request, 'posApp/sales.html', context)
@@ -1314,82 +1342,6 @@ from dateutil.relativedelta import relativedelta
 import pandas as pd
 
 import calendar
-@login_required
-def dashboard_report(request):
-    try:
-        user_profile = UserProfile.objects.get(user=request.user)
-    except UserProfile.DoesNotExist:
-        return render(request, 'posApp/error.html', {'message': 'Este usuario no tiene un perfil asociado.'})
-    
-    if not user_profile.sucursal:
-        return render(request, 'posApp/error.html', {'message': 'Este perfil no tiene una sucursal asignada.'})
-    
-    sucursal_a_usar = user_profile.sucursal
-    if user_profile.is_manager and 'sucursal_id' in request.session:
-        try:
-            sucursal_a_usar = Sucursal.objects.get(id=request.session['sucursal_id'])
-        except Sucursal.DoesNotExist:
-            return render(request, 'posApp/error.html', {'message': 'Sucursal no válida en la sesión.'})
-    
-    # Parámetros de fecha opcionales desde el frontend
-    start_date_str = request.GET.get('start_date')
-    end_date_str = request.GET.get('end_date')
-    
-    sales_queryset = Sales.objects.filter(sucursal=sucursal_a_usar)
-    if start_date_str and end_date_str:
-        try:
-            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
-            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
-            sales_queryset = sales_queryset.filter(date_added__date__range=[start_date, end_date])
-        except ValueError:
-            pass  # Si las fechas son inválidas, se ignora el filtro
-
-    # Obtener ventas mensuales históricas
-    sales_by_month = (sales_queryset
-                      .annotate(month=TruncMonth('date_added'))
-                      .values('month')
-                      .annotate(total=Sum('grand_total'))
-                      .order_by('month'))
-
-    monthly_labels = []
-    monthly_data = []
-    months = []
-    for item in sales_by_month:
-        month_date = item['month']
-        months.append(month_date)
-        monthly_labels.append(month_date.strftime('%b %Y'))
-        monthly_data.append(float(item['total'] or 0))
-    
-    # (Opcional) Datos para distribución de ventas por tipo de pago
-    payment_data = (sales_queryset
-                    .values('tipoPago')
-                    .annotate(total=Sum('grand_total')))
-    
-    payment_labels = []
-    payment_values = []
-    tipo_pago_dict = {1: "Efectivo", 2: "Banco", 3: "Efectivo y Tarjeta"}
-    for item in payment_data:
-        payment_type = tipo_pago_dict.get(item['tipoPago'], "Otro")
-        payment_labels.append(payment_type)
-        payment_values.append(float(item['total'] or 0))
-    
-    context = {
-        'page_title': 'Dashboard de Ventas',
-        # Datos históricos
-        'monthly_labels': monthly_labels,
-        'monthly_data': monthly_data,
-        # (Ya no se incluyen proyecciones)
-        'forecast_labels': [],
-        'forecast_data': [],
-        # Distribución de pagos
-        'payment_labels': payment_labels,
-        'payment_data': payment_values,
-        # Fechas de filtro
-        'start_date': start_date_str if start_date_str else '',
-        'end_date': end_date_str if end_date_str else '',
-    }
-    return render(request, 'posApp/dashboard_report.html', context)
-
 from django.views.decorators.http import require_GET
 @require_GET
 def buscar_clientes(request):
