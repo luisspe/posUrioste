@@ -35,7 +35,7 @@
     </script>
 
     <link rel="stylesheet" href="{% static 'posAPP/assets/bootstrap/css/bootstrap.min.css' %}">
-    <link rel="stylesheet" href="{% static 'posAPP/assets/default/css/urioste.css' %}?v=20261101c">
+    <link rel="stylesheet" href="{% static 'posAPP/assets/default/css/urioste.css' %}?v=20261119b">
     <script src="{% static 'posAPP/assets/default/js/u-combo.js' %}?v=20261014s" defer></script>
 
     <script src="{% static 'posAPP/assets/bootstrap/js/bootstrap.min.js' %}"></script>
@@ -151,13 +151,38 @@
                 }
             })
         }
+        // Aviso flotante usado por las pantallas viejas (borrar cliente, producto, etc.)
+        window.alert_toast = function(msg, tipo) {
+            var $t = $('#u-toast-global');
+            if (!$t.length) $t = $('<div id="u-toast-global" class="u-toast" role="status" aria-live="polite" hidden>').appendTo('body');
+            $t.text(msg).toggleClass('u-toast--ok', tipo == 'success').prop('hidden', false);
+            clearTimeout($t.data('timer'));
+            $t.data('timer', setTimeout(function() { $t.prop('hidden', true) }, 6000));
+        }
         window._conf = function($msg = '', $func = '', $params = []) {
             $('#confirm_modal #confirm').attr('onclick', $func + "(" + $params.join(',') + ")")
             $('#confirm_modal .modal-body').html($msg)
             $('#confirm_modal').modal('show')
         }
+        // Borrar una salida: el botón solo aparece a quien tiene el permiso
+        window.borrar_salida = function(id) {
+            start_loader();
+            $.post("{% url 'delete_salida' %}", {id: id, csrfmiddlewaretoken: '{{ csrf_token }}'})
+                .done(function(resp) {
+                    if (resp.status == 'success') return location.reload();
+                    $('#confirm_modal').modal('hide'); alert_toast(resp.msg || 'No se pudo eliminar la salida.', 'error'); end_loader();
+                })
+                .fail(function(xhr) {
+                    $('#confirm_modal').modal('hide');
+                    alert_toast((xhr.responseJSON && xhr.responseJSON.msg) || 'No se pudo eliminar la salida.', 'error'); end_loader();
+                });
+        }
         $(function() {
-
+            $(document).on('click', '[data-salida-borrar]', function() {
+                var texto = $('<b>').text($(this).data('salida-texto'))[0].outerHTML;
+                _conf('¿Eliminar la salida ' + texto + '? Ya no contará en los cortes ni en los reportes. Esto no se puede deshacer.',
+                      'borrar_salida', [parseInt($(this).data('salida-borrar'), 10)]);
+            });
         })
     </script>
 

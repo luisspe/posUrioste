@@ -13,6 +13,7 @@ from django.shortcuts import render
 from django.utils import timezone
 
 from posApp.models import Asistencia, Clientes, Salida, Sales, salesItems
+from posApp.permisos import puede_borrar_salidas
 from posApp.views_asistencia import _sucursal_de_request
 
 MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre',
@@ -379,7 +380,9 @@ def reporte_mensual(request):
     sucursal, error = _sucursal_de_request(request)
     if error:
         return error
-    return render(request, 'posApp/reporte_mensual.html', _datos_reporte_mensual(request, sucursal))
+    datos = _datos_reporte_mensual(request, sucursal)
+    datos['puede_borrar_salidas'] = puede_borrar_salidas(request.user)
+    return render(request, 'posApp/reporte_mensual.html', datos)
 
 
 # ---------------------------------------------------------------------------

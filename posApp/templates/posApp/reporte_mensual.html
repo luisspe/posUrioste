@@ -323,6 +323,7 @@
                     <span class="u-rm__movs-fecha">{{ s.fecha|date:"j M"|lower }}</span>
                     <span class="u-rm__movs-concepto">{{ s.concepto|default:"Sin concepto" }}{% if s.comentario %}<small>{{ s.comentario }}</small>{% endif %}</span>
                     <b>−${{ s.monto|floatformat:2|intcomma }}</b>
+                    {% if puede_borrar_salidas %}<button type="button" class="u-btn u-btn--ghost u-btn--icon u-btn--peligro u-salida__borrar" data-salida-borrar="{{ s.id }}" data-salida-texto="{{ s.concepto|default:'Sin concepto' }} por ${{ s.monto|floatformat:2|intcomma }}" aria-label="Eliminar salida {{ s.concepto|default:'' }}" title="Eliminar salida"><span class="material-symbols-rounded" aria-hidden="true">delete</span></button>{% endif %}
                 </li>
                 {% endfor %}
             </ul>

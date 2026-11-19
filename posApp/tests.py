@@ -51,6 +51,17 @@ class AsistenciaTests(TestCase):
         salesItems.objects.create(sale_id=venta, product_id=producto, price=producto.price, qty=1,
                                   total=producto.price, client=cliente, sucursal=self.sucursal)
 
+    def test_borrar_cliente_con_ventas_avisa_y_no_borra(self):
+        self.vender(self.ana, self.mensualidad, hace_dias=3)
+        resp = self.client.post(reverse('delete_cliente'), {'id': self.ana.id}).json()
+        self.assertEqual(resp['status'], 'failed')
+        self.assertIn('1 venta(s)', resp['msg'])
+        self.assertTrue(Clientes.objects.filter(id=self.ana.id).exists())
+
+        resp = self.client.post(reverse('delete_cliente'), {'id': self.beto.id}).json()
+        self.assertEqual(resp['status'], 'success')
+        self.assertFalse(Clientes.objects.filter(id=self.beto.id).exists())
+
     def test_estado_pago(self):
         self.vender(self.ana, self.mensualidad, hace_dias=3)     # al corriente
         self.vender(self.beto, self.mensualidad, hace_dias=27)   # vence en 3 días
@@ -773,3 +784,34 @@ class LeerHorarioTests(TestCase):
         }
         for texto, esperado in casos.items():
             self.assertEqual(leer_horario(texto), esperado, texto)
+
+
+class BorrarSalidaTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth.models import Permission
+        from posApp.models import Salida
+        self.sucursal = Sucursal.objects.create(nombre='Acuatica Urioste Chuburna')
+        self.salida = Salida.objects.create(concepto='Acido', monto=129, fecha=timezone.localdate(), sucursal=self.sucursal)
+        self.otra = Salida.objects.create(concepto='Cloro', monto=500, fecha=timezone.localdate(),
+                                          sucursal=Sucursal.objects.create(nombre='Otra'))
+        self.dueno = User.objects.create_user('luisU', password='x')
+        self.dueno.user_permissions.add(Permission.objects.get(codename='delete_salida'))
+        self.jefe = User.objects.create_superuser('yuri', password='x')
+        for u in (self.dueno, self.jefe):
+            UserProfile.objects.create(user=u, sucursal=self.sucursal)
+
+    def test_solo_quien_tiene_el_permiso_puede_borrar(self):
+        from posApp.models import Salida
+        # Ser superusuario no basta
+        self.client.force_login(self.jefe)
+        self.assertNotContains(self.client.get(reverse('sales-page')), 'data-salida-borrar="')
+        self.assertEqual(self.client.post(reverse('delete_salida'), {'id': self.salida.id}).status_code, 403)
+        self.assertTrue(Salida.objects.filter(id=self.salida.id).exists())
+
+        self.client.force_login(self.dueno)
+        self.assertContains(self.client.get(reverse('sales-page')), 'data-salida-borrar="')
+        self.assertContains(self.client.get(reverse('monthly_report')), 'data-salida-borrar="')
+        # No puede borrar la de otra sucursal
+        self.assertEqual(self.client.post(reverse('delete_salida'), {'id': self.otra.id}).json()['status'], 'failed')
+        self.assertEqual(self.client.post(reverse('delete_salida'), {'id': self.salida.id}).json()['status'], 'success')
+        self.assertFalse(Salida.objects.filter(id=self.salida.id).exists())

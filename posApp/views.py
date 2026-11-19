@@ -14,6 +14,8 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from django.contrib.auth.decorators import login_required
 from posApp.models import Sucursal, UserProfile
+from posApp.permisos import puede_borrar_salidas
+from posApp.views_asistencia import _sucursal_de_request
 from .forms import MensualidadForm, PlanInscripcionForm, SalidaForm, SellerUserCreationForm, SucursalForm
 from django.views.generic import CreateView
 from django.urls import reverse,  reverse_lazy
@@ -458,7 +460,12 @@ def delete_cliente(request):
     try:
         # Solo permite eliminar el cliente si pertenece a la sucursal del usuario
         cliente = Clientes.objects.filter(id=cliente_id, sucursal=sucursal_a_usar).first()
-        if cliente:
+        if cliente and cliente.sales_set.exists():
+            # Las ventas son historial de caja: no se borran junto con el cliente
+            resp['status'] = 'failed'
+            resp['msg'] = (f'No se puede eliminar a {cliente.nombre} porque tiene '
+                           f'{cliente.sales_set.count()} venta(s) registrada(s). Las ventas se conservan para los reportes.')
+        elif cliente:
             cliente.delete()
             resp['status'] = 'success'
             messages.success(request, 'Cliente eliminado con éxito.')
@@ -1306,6 +1313,7 @@ def salesList(request):
         'page_obj': page_obj,
         'query_params': query_params.urlencode(),
         'salidas': list(salidas_query.order_by('-fecha')),
+        'puede_borrar_salidas': puede_borrar_salidas(request.user),
         'total_ventas': total_ventas,
         'total_salidas': total_salidas,
         'neto': total_ventas - total_salidas,
@@ -1526,6 +1534,20 @@ def add_salida(request):
         form = SalidaForm()
 
     return render(request, 'posApp/add_salida.html', {'form': form})
+
+
+@login_required
+def delete_salida(request):
+    if request.method != 'POST' or not puede_borrar_salidas(request.user):
+        return JsonResponse({'status': 'failed', 'msg': 'No tienes permiso para eliminar salidas.'}, status=403)
+    sucursal, error = _sucursal_de_request(request)
+    if error:
+        return JsonResponse({'status': 'failed', 'msg': 'No se pudo saber tu sucursal.'})
+    salida = Salida.objects.filter(id=request.POST.get('id') or 0, sucursal=sucursal).first()
+    if not salida:
+        return JsonResponse({'status': 'failed', 'msg': 'La salida no existe o es de otra sucursal.'})
+    salida.delete()
+    return JsonResponse({'status': 'success'})
 
 
 @login_required

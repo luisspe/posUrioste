@@ -39,6 +39,7 @@ urlpatterns = [
     path('delete_plan/', views.delete_plan, name='delete-plan'),
     path('clientes/<int:cliente_id>/mensualidades/', views.cliente_mensualidades, name='cliente_mensualidades'),
     path('salida/add/', views.add_salida, name='add_salida'),
+    path('salida/eliminar/', views.delete_salida, name='delete_salida'),
     path('clientes/<int:cliente_id>/mensualidades/pagar/', views.pagar_primera_mensualidad, name='pagar_primera_mensualidad'),
     path('seleccionar-mensualidades/<int:cliente_id>/', views.seleccionar_mensualidades, name='seleccionar-mensualidades'),
     path('generar-mensualidades/<int:cliente_id>/', views.generar_mensualidades, name='generar-mensualidades'),

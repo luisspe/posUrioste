@@ -179,6 +179,7 @@
                         {% if salida.comentario %}<span class="u-pago__detalle">{{ salida.comentario }}</span>{% endif %}
                     </div>
                     <span class="u-venta__total u-venta__total--salida">−${{ salida.monto|floatformat:2|intcomma }}</span>
+                    {% if puede_borrar_salidas %}<button type="button" class="u-btn u-btn--ghost u-btn--icon u-btn--peligro u-salida__borrar" data-salida-borrar="{{ salida.id }}" data-salida-texto="{{ salida.concepto|default:'Sin concepto' }} por ${{ salida.monto|floatformat:2|intcomma }}" aria-label="Eliminar salida {{ salida.concepto|default:'' }}" title="Eliminar salida"><span class="material-symbols-rounded" aria-hidden="true">delete</span></button>{% endif %}
                 </li>
                 {% endfor %}
             </ul>
