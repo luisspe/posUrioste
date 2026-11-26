@@ -43,6 +43,21 @@
         {% endfor %}
     </nav>
 
+    {% if otros_dias %}
+    <details class="u-otros-dias"{% if grupo and not grupo in grupos_dia %} open{% endif %}>
+        <summary>Grupos que no tienen clase este día ({{ otros_dias|length }})</summary>
+        <nav class="u-clases" aria-label="Grupos de otros días">
+            {% for g in otros_dias %}
+            <a class="u-clase{% if grupo and g.id == grupo.id %} is-active{% endif %}" href="?fecha={{ fecha|date:'Y-m-d' }}&grupo={{ g.id }}"{% if grupo and g.id == grupo.id %} aria-current="page"{% endif %}>
+                <span class="u-clase__hora">{% if g.hora_inicio %}{{ g.hora_inicio|time:"H:i" }}{% else %}Sin hora{% endif %}</span>
+                <span class="u-clase__nombre">{{ g.nombre }}</span>
+                <span class="u-clase__cuenta">{{ g.dias_texto }}</span>
+            </a>
+            {% endfor %}
+        </nav>
+    </details>
+    {% endif %}
+
     {% if sin_clase %}
     <details class="u-panel u-sin-clase">
         <summary>

@@ -124,12 +124,12 @@
                                 <input class="form-control form-control-sm text-center" type="date" name="proximo_pago" id="proximo-pago">
                                 <small class="d-block text-light mb-2" id="proximo-pago-ayuda">Se llena solo al agregar una mensualidad. Puedes cambiarlo.</small>
                                 <div id="grupo-pos" hidden>
-                                    <dt class="h4 fw-bold text-light">Grupo</dt>
-                                    <select class="form-select form-select-sm" name="grupo_id" id="grupo-id">
-                                        <option value="">Sin cambiar grupo</option>
-                                        {% for g in grupos %}<option value="{{ g.id }}">{{ g.nombre }}</option>{% endfor %}
+                                    <dt class="h4 fw-bold text-light"><label for="grupo-id">Grupo <small class="fw-normal">(opcional)</small></label></dt>
+                                    <select class="form-select form-select-sm" name="grupo_id" id="grupo-id" data-placeholder="Escribe la hora o el nombre del grupo">
+                                        <option value="">No cambiar grupo</option>
+                                        {% for g in grupos %}<option value="{{ g.id }}" data-nombre="{{ g.nombre }}">{{ g.nombre }}{% if g.dias %} ({{ g.dias_texto }}){% endif %}</option>{% endfor %}
                                     </select>
-                                    <small class="d-block text-light mb-2" id="grupo-ayuda">El alumno queda inscrito en este grupo.</small>
+                                    <small class="d-block text-light mb-2" id="grupo-ayuda"></small>
                                 </div>
                                 <dt class="h4 fw-bold text-light">Comentario</dt>
                                
@@ -179,10 +179,11 @@
             <p>Toca <strong>Agrega Articulo</strong> y la mensualidad pasa a la lista.</p>
         </section>
         <section class="u-guia__paso">
-            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/cobrar_3.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
+            <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/cobrar_3.mp4' %}?v=20261119" muted loop playsinline preload="none" aria-hidden="true"></video>
             <h2>3. Revisa el próximo pago y el grupo</h2>
             <p>Al agregar una mensualidad, <strong>Próximo pago</strong> se llena solo con su día de pago. Puedes cambiar la fecha si acordaron otra.</p>
-            <p>Si la mensualidad no dice el horario (como "3 CLA X SEM"), aparece <strong>Grupo</strong>: confirma que sea su clase. Al cobrar, el alumno queda inscrito en ese grupo y su horario se actualiza.</p>
+            <p>Al elegir al alumno aparece <strong>Grupo</strong>, abajo dice en cuál está ahora. Si la mensualidad no dice el horario (como "3 CLA X SEM"), se sugiere uno: confirma que sea su clase. Escribe la hora o el nombre para buscarlo.</p>
+            <p>Es opcional: en una visita o en la tiendita déjalo vacío, o aprovecha para elegirle grupo a quien aún no tiene. Al cobrar, el alumno queda inscrito en ese grupo y su horario se actualiza.</p>
         </section>
         <section class="u-guia__paso">
             <video class="u-guia__video" src="{% static 'posAPP/assets/default/guia/cobrar_4.mp4' %}" muted loop playsinline preload="none" aria-hidden="true"></video>
@@ -261,26 +262,38 @@
         $campo.val(fechaISO(fecha))
     }
 
-    // Mensualidad sin grupo propio (ej. "3 CLA X SEM"): pedir el grupo, sugiriendo el que ya tiene el alumno
+    function nombreGrupo(id) {
+        return $('#grupo-id option[value="' + id + '"]').data('nombre') || ''
+    }
+
+    // Grupo del alumno, opcional en cualquier venta (también tiendita o visita) para que los grupos se vayan llenando.
+    // Con una mensualidad sin grupo propio (ej. "3 CLA X SEM") se sugiere uno; con cualquier otra venta se deja vacío.
     function sugerirGrupo() {
-        var hayMensualidad = false, productoConGrupo = false
+        var cliente = client_arr[$('#client').val()]
+        var hayMensualidad = false, grupoDelProducto = null
         $('#POS-field table tbody [name="product_id[]"]').each(function() {
             var p = prod_arr[this.value]
             if (p && p.dias_vigencia) hayMensualidad = true
-            if (p && p.grupo) productoConGrupo = true
+            if (p && p.grupo && !grupoDelProducto) grupoDelProducto = p.grupo
         })
-        var mostrar = hayMensualidad && !productoConGrupo && $('#grupo-id option').length > 1
+        var mostrar = !!cliente && !cliente.general && $('#grupo-id option').length > 1
         $('#grupo-pos').attr('hidden', !mostrar)
         if (!mostrar) { $('#grupo-id').val(''); grupoManual = false; return }
         if (grupoManual) return
-        // 1) lo que dice el nombre del producto, 2) el grupo actual del alumno
-        var sugerido = null, ayuda = 'El alumno queda inscrito en este grupo.'
-        $('#POS-field table tbody [name="product_id[]"]').each(function() {
-            var p = prod_arr[this.value]
-            if (!sugerido && p && p.grupo_sugerido) { sugerido = p.grupo_sugerido; ayuda = 'Sugerido por el nombre de "' + p.name + '". Revisa que sea su clase.' }
-        })
-        var cliente = client_arr[$('#client').val()]
-        if (!sugerido && cliente && cliente.grupos.length) { sugerido = cliente.grupos[0]; ayuda = 'Es el grupo que ya tiene. Cámbialo si va a otra clase.' }
+
+        var actuales = cliente.grupos.map(nombreGrupo).filter(Boolean)
+        var ayuda = actuales.length ? 'Ahora está en: ' + actuales.join(', ') + '.' : 'Aún no tiene grupo. Si sabes a cuál va, elígelo.'
+        var sugerido = null
+        if (grupoDelProducto) {
+            ayuda = 'El producto lo inscribe en ' + nombreGrupo(grupoDelProducto) + '. Elige otro solo si además va a otra clase.'
+        } else if (hayMensualidad) {
+            // 1) lo que dice el nombre del producto, 2) el grupo actual del alumno
+            $('#POS-field table tbody [name="product_id[]"]').each(function() {
+                var p = prod_arr[this.value]
+                if (!sugerido && p && p.grupo_sugerido) { sugerido = p.grupo_sugerido; ayuda = 'Sugerido por el nombre de "' + p.name + '". Revisa que sea su clase.' }
+            })
+            if (!sugerido && cliente.grupos.length) { sugerido = cliente.grupos[0]; ayuda = 'Es el grupo que ya tiene. Cámbialo si va a otra clase.' }
+        }
         $('#grupo-id').val(sugerido ? String(sugerido) : '')
         $('#grupo-ayuda').text(ayuda)
     }

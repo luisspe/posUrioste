@@ -4688,3 +4688,19 @@ body.u-error {
 @container pagina (max-width: 640px) {
     .u-salidas .u-venta:has(.u-salida__borrar) { grid-template-columns: 48px minmax(0, 1fr) auto auto; }
 }
+
+/* Pase de lista: grupos sin clase ese día, a la mano para reposiciones */
+.u-otros-dias {
+    margin-bottom: 12px;
+}
+
+.u-otros-dias summary {
+    cursor: pointer;
+    padding: 4px 2px 8px;
+    color: var(--u-tinta-2);
+    font-weight: 600;
+}
+
+.u-otros-dias .u-clase {
+    opacity: .85;
+}

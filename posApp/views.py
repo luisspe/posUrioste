@@ -1071,7 +1071,9 @@ def pos(request):
                                         if product.dias_vigencia and not product.grupo_id else None)}
                     for product in products]
     clients = clients.prefetch_related('grupos')
+    # "General" es el cliente de mostrador (tiendita): a ese no se le pide grupo
     client_json = [{'id': client.id, 'dia_pago': dia_de_pago(client.pay_day),
+                    'general': (client.nombre or '').strip().lower() == 'general',
                     'grupos': [g.id for g in client.grupos.all()]} for client in clients]
 
     context = {

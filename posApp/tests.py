@@ -582,6 +582,18 @@ class AsistenciaTests(TestCase):
         self.assertEqual([a.cliente_id for a in r.context['sin_clase']], [self.ana.id])
         self.assertContains(r, 'llegaron sin clase este día')
 
+    def test_grupos_de_otro_dia_se_pueden_abrir_en_pase_de_lista(self):
+        hoy = timezone.localdate()
+        otro_dia = str((hoy.weekday() + 1) % 7)
+        grupo = Grupo.objects.create(nombre='Niños B 4pm', sucursal=self.sucursal, hora_inicio=time(16), dias=otro_dia)
+        grupo.clientes.add(self.ana)
+        r = self.client.get(reverse('pase-lista'), {'fecha': hoy.isoformat()})
+        self.assertNotIn(grupo, r.context['grupos_dia'])
+        self.assertEqual(r.context['otros_dias'], [grupo])
+        self.assertContains(r, 'Grupos que no tienen clase este día')
+        r = self.client.get(reverse('pase-lista'), {'fecha': hoy.isoformat(), 'grupo': grupo.id})
+        self.assertEqual([f['cliente'] for f in r.context['filas']], [self.ana])
+
     def test_checkin_tarde_queda_con_retardo_en_su_grupo(self):
         hoy = timezone.localdate()
         grupo = Grupo.objects.create(nombre='Niños 9am', sucursal=self.sucursal, hora_inicio=time(9), dias='')

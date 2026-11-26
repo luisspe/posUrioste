@@ -224,9 +224,12 @@ def pase_lista(request):
     grupo_id = request.GET.get('grupo') or ''
 
     activos = Q(clientes__status=1)
-    grupos_dia = [g for g in Grupo.objects.filter(sucursal=sucursal_a_usar, activo=True)
-                  .annotate(alumnos=Count('clientes', filter=activos, distinct=True))
-                  .order_by(F('hora_inicio').asc(nulls_last=True), 'nombre') if g.toca_el(fecha)]
+    todos = list(Grupo.objects.filter(sucursal=sucursal_a_usar, activo=True)
+                 .annotate(alumnos=Count('clientes', filter=activos, distinct=True))
+                 .order_by(F('hora_inicio').asc(nulls_last=True), 'nombre'))
+    grupos_dia = [g for g in todos if g.toca_el(fecha)]
+    # Los que no tienen clase ese día (ej. los grupos B en miércoles) también se pueden abrir, por si vinieron a reponer
+    otros_dias = [g for g in todos if not g.toca_el(fecha)]
     grupo = next((g for g in grupos_dia if str(g.id) == grupo_id), None)
     if grupo_id and not grupo:
         # Un grupo que no toca ese día también se puede abrir desde su enlace
@@ -291,6 +294,7 @@ def pase_lista(request):
         'dia_siguiente': fecha + timedelta(days=1),
         'es_hoy': fecha == hoy,
         'grupos_dia': grupos_dia,
+        'otros_dias': otros_dias,
         'grupo': grupo,
         'hay_grupos': Grupo.objects.filter(sucursal=sucursal_a_usar).exists(),
         'filas': filas,
