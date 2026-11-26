@@ -357,6 +357,22 @@ class AsistenciaTests(TestCase):
         self.refresco.refresh_from_db()
         self.assertEqual(self.refresco.dias_vigencia, 15)
 
+    def test_producto_guarda_el_grupo_al_que_inscribe(self):
+        grupo = Grupo.objects.create(nombre='Niños A 4pm', sucursal=self.sucursal, hora_inicio=time(16), dias='024')
+        datos = {'id': self.mensualidad.id, 'code': '1', 'category_id': self.mensualidad.category_id_id, 'name': self.mensualidad.name,
+                 'description': '', 'price': '900', 'status': '1', 'dias_vigencia': '30', 'entrada_inventario': '0'}
+        r = self.client.get(reverse('manage_products-page'), {'id': self.mensualidad.id})
+        self.assertContains(r, 'Grupo al que inscribe')
+        self.client.post(reverse('save-product-page'), {**datos, 'grupo_id': grupo.id})
+        self.mensualidad.refresh_from_db()
+        self.assertEqual(self.mensualidad.grupo, grupo)
+        self.client.post(reverse('save-product-page'), datos)  # formulario viejo sin el campo: no lo borra
+        self.mensualidad.refresh_from_db()
+        self.assertEqual(self.mensualidad.grupo, grupo)
+        self.client.post(reverse('save-product-page'), {**datos, 'grupo_id': ''})
+        self.mensualidad.refresh_from_db()
+        self.assertIsNone(self.mensualidad.grupo)
+
     def test_checkin_qr(self):
         url = reverse('checkin-registrar')
         self.vender(self.ana, self.mensualidad, hace_dias=3)

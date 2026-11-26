@@ -897,7 +897,8 @@ def manage_products(request):
 
     context = {
         'product': product,
-        'categories': categories
+        'categories': categories,
+        'grupos': Grupo.objects.filter(sucursal=sucursal_a_usar, activo=True),
     }
 
     return render(request, 'posApp/manage_product.html', context)
@@ -933,6 +934,9 @@ def save_product(request):
     entrada_inventario = int(data.get('entrada_inventario', 0))
     dias_vigencia = data.get('dias_vigencia', '').strip()
     dias_vigencia = int(dias_vigencia) if dias_vigencia.isdigit() and int(dias_vigencia) > 0 else None
+    # Grupo al que inscribe al venderse; solo se toca si el formulario trae el campo
+    cambia_grupo = 'grupo_id' in data
+    grupo = Grupo.objects.filter(id=data.get('grupo_id') or 0, sucursal=sucursal_a_usar).first() if cambia_grupo else None
 
     # Validar categoría
     category = Category.objects.filter(id=category_id, sucursal=sucursal_a_usar).first()
@@ -957,6 +961,8 @@ def save_product(request):
                 'status': int(data.get('status', '1')),
                 'dias_vigencia': dias_vigencia,
             }
+            if cambia_grupo:
+                product_attributes['grupo'] = grupo
 
             # Actualizar atributos del producto
             Products.objects.filter(id=product_id, sucursal=sucursal_a_usar).update(**product_attributes)
@@ -976,6 +982,7 @@ def save_product(request):
                 price=float(data.get('price', '0')),
                 status=int(data.get('status', '1')),
                 dias_vigencia=dias_vigencia,
+                grupo=grupo,
                 sucursal=sucursal_a_usar,
                 cantidad_disponible=int(data.get('cantidad_disponible', 0)) + entrada_inventario
             )

@@ -39,6 +39,14 @@
                 <small class="form-text text-muted">Ej. 30 para una mensualidad. Déjalo vacío si el producto no es pago de clases (comida, material, inscripción...).</small>
             </div>
             <div class="form-group mb-3">
+                <label for="grupo_id" class="control-label">Grupo al que inscribe</label>
+                <select name="grupo_id" id="grupo_id" class="form-select form-select-sm rounded-0" data-placeholder="Escribe la hora o el nombre del grupo">
+                    <option value="">Ninguno: se elige al cobrar</option>
+                    {% for g in grupos %}<option value="{{ g.id }}"{% if product.grupo_id == g.id %} selected{% endif %}>{{ g.nombre }}{% if g.dias %} ({{ g.dias_texto }}){% endif %}</option>{% endfor %}
+                </select>
+                <small class="form-text text-muted">Si el producto es de una clase fija (ej. "Niños A 4pm"), al venderlo el alumno queda en ese grupo. Déjalo en Ninguno para paquetes que sirven a cualquier hora, como "3 CLA X SEM".</small>
+            </div>
+            <div class="form-group mb-3">
                 <label for="cantidad_disponible" class="control-label">Cantidad Disponible</label>
                 <input type="number" name="cantidad_disponible" id="cantidad_disponible" class="form-control form-control-sm rounded-0" value="{% if product.cantidad_disponible %}{{ product.cantidad_disponible }}{% else %}0{% endif %}" required>
             </div>
